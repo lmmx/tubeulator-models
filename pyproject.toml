@@ -1,0 +1,17 @@
+[project]
+name = "tubeulator-models"
+version = "0.1.0"
+description = "Models of the TfL transit network"
+readme = "README.md"
+authors = [
+    { name = "Louis Maddox", email = "louismmx@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+tubeulator-models = "tubeulator_models:main"
+
+[build-system]
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"
