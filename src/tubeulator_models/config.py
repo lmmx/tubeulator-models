@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, computed_field
 
-from .defaults import repo_root, resolve, resolve_data
+from .defaults import default_model_type, repo_root, resolve, resolve_data
 
 
 __all__ = ["TrainConfig"]
@@ -38,6 +38,8 @@ class TrainConfig(BaseModel):
     val_split: float
     seed: int
     log_every: int
+    num_workers: int
+    pin_memory: bool
 
     # ── route enumeration ─────────────────────────────────────
     max_transfers: int
@@ -81,11 +83,12 @@ class TrainConfig(BaseModel):
     @classmethod
     def from_defaults(
         cls,
-        model_type: str = "change",
+        model_type: str | None = None,
         profile: str | None = None,
         **overrides,
     ) -> TrainConfig:
         """TOML defaults ← explicit overrides. The only way to build this."""
-        defaults = resolve(model_type, profile=profile)
+        mt = model_type or default_model_type()
+        defaults = resolve(mt, profile=profile)
         defaults.update({k: v for k, v in overrides.items() if v is not None})
         return cls(**defaults)

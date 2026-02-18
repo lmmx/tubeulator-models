@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader, random_split
 from .config import TrainConfig
 from .dataset import PAD, RouteDataset, collate_routes
 from .defaults import MODEL_TYPES
+from .evaluate import RouteMetrics, compute_metrics
 from .graph_enriched import build_enriched_graph
 from .models.combined import RouteModel
 from .topology import extract
@@ -61,12 +62,15 @@ def _compute_loss(
 
 
 def train(cfg: TrainConfig) -> None:
+    from rich import print as rprint
+    from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(cfg.seed)
 
-    print("Extracting topology...")
+    rprint("[bold]Extracting topology...")
     topo = extract(cfg.gtfs_path)
-    print(
+    rprint(
         f"  {topo.n_stations} stations, {topo.n_lines} lines, "
         f"{len(topo.interchanges)} interchanges"
     )
@@ -74,7 +78,7 @@ def train(cfg: TrainConfig) -> None:
     if not cfg.routes_path.exists():
         from .routes import build_dataset
 
-        print("Building route dataset...")
+        rprint("[bold]Building route dataset...")
         build_dataset(
             topo,
             max_transfers=cfg.max_transfers,
@@ -97,13 +101,19 @@ def train(cfg: TrainConfig) -> None:
         batch_size=cfg.batch_size,
         shuffle=True,
         collate_fn=collate_routes,
+        num_workers=cfg.num_workers,
+        pin_memory=cfg.pin_memory,
+        persistent_workers=cfg.num_workers > 0,
     )
     val_dl = DataLoader(
         val_ds,
         batch_size=cfg.batch_size,
         collate_fn=collate_routes,
+        num_workers=cfg.num_workers,
+        pin_memory=cfg.pin_memory,
+        persistent_workers=cfg.num_workers > 0,
     )
-    print(f"  {n_train:,} train, {n_val:,} val examples")
+    rprint(f"  {n_train:,} train, {n_val:,} val examples")
 
     model = RouteModel(
         n_stations=ds.n_stations,
@@ -117,7 +127,9 @@ def train(cfg: TrainConfig) -> None:
     ).to(device)
 
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"  Model {cfg.model_type}: {n_params:,} params | {cfg.hp_tag}")
+    rprint(
+        f"  Model [bold cyan]{cfg.model_type}[/]: {n_params:,} params | {cfg.hp_tag}"
+    )
 
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -132,40 +144,37 @@ def train(cfg: TrainConfig) -> None:
     best_val = float("inf")
     cfg.checkpoint_dir.mkdir(exist_ok=True)
 
-    for epoch in range(1, cfg.epochs + 1):
-        model.train()
-        total_loss = 0.0
-        for origins, dests, labels in train_dl:
-            origins = origins.to(device)
-            dests = dests.to(device)
-            labels = labels.to(device)
+    with Progress(
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        TimeRemainingColumn(),
+        TextColumn("·"),
+        TextColumn(
+            "loss [cyan]{task.fields[train_loss]:.4f}[/]/[magenta]{task.fields[val_loss]:.4f}"
+        ),
+        TextColumn("exact [bold green]{task.fields[exact_match]:.1%}"),
+        TextColumn("lr [dim]{task.fields[lr]:.1e}"),
+        TextColumn("{task.fields[star]}"),
+        refresh_per_second=4,
+    ) as progress:
+        epoch_task = progress.add_task(
+            "Training",
+            total=cfg.epochs,
+            train_loss=0.0,
+            val_loss=0.0,
+            exact_match=0.0,
+            lr=cfg.lr,
+            star="",
+        )
 
-            logits = model(
-                graph.x,
-                graph.edge_index,
-                graph.edge_attr,
-                origins,
-                dests,
-                labels=labels,
-            )
-            loss = _compute_loss(logits, labels, cfg.model_type)
-
-            optimizer.zero_grad()
-            loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
-            optimizer.step()
-            total_loss += loss.item() * origins.size(0)
-
-        scheduler.step()
-        avg_train = total_loss / n_train
-
-        model.eval()
-        val_loss = 0.0
-        with torch.no_grad():
-            for origins, dests, labels in val_dl:
+        for epoch in range(1, cfg.epochs + 1):
+            model.train()
+            total_loss = 0.0
+            for origins, dests, labels in train_dl:
                 origins = origins.to(device)
                 dests = dests.to(device)
                 labels = labels.to(device)
+
                 logits = model(
                     graph.x,
                     graph.edge_index,
@@ -174,28 +183,80 @@ def train(cfg: TrainConfig) -> None:
                     dests,
                     labels=labels,
                 )
-                vl = _compute_loss(logits, labels, cfg.model_type)
-                val_loss += vl.item() * origins.size(0)
-        avg_val = val_loss / n_val
+                loss = _compute_loss(logits, labels, cfg.model_type)
 
-        if epoch % cfg.log_every == 0 or epoch == 1:
-            lr_now = scheduler.get_last_lr()[0]
-            print(
-                f"  epoch {epoch:3d} | train {avg_train:.4f} "
-                f"| val {avg_val:.4f} | lr {lr_now:.2e}"
+                optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
+                optimizer.step()
+                total_loss += loss.item() * origins.size(0)
+
+            scheduler.step()
+            avg_train = total_loss / n_train
+
+            # --- validation ---
+            model.eval()
+            val_loss = 0.0
+            all_metrics: list[RouteMetrics] = []
+            with torch.no_grad():
+                for origins, dests, labels in val_dl:
+                    origins = origins.to(device)
+                    dests = dests.to(device)
+                    labels = labels.to(device)
+                    logits = model(
+                        graph.x,
+                        graph.edge_index,
+                        graph.edge_attr,
+                        origins,
+                        dests,
+                        labels=labels,
+                    )
+                    vl = _compute_loss(logits, labels, cfg.model_type)
+                    val_loss += vl.item() * origins.size(0)
+
+                    all_metrics.append(
+                        compute_metrics(
+                            logits,
+                            labels,
+                            cfg.model_type,
+                            n_lines=ds.n_lines,
+                            n_stations=ds.n_stations,
+                        )
+                    )
+            avg_val = val_loss / n_val
+
+            # aggregate metrics across batches
+            total_em = sum(m.exact_match * m.n_examples for m in all_metrics)
+            total_n = sum(m.n_examples for m in all_metrics)
+            epoch_em = total_em / max(total_n, 1)
+
+            star = ""
+            if avg_val < best_val:
+                best_val = avg_val
+                star = "[bold green]★[/]"
+                ckpt = cfg.checkpoint_dir / f"model_{cfg.model_type}_best.pt"
+                torch.save(model.state_dict(), ckpt)
+
+            progress.update(
+                epoch_task,
+                advance=1,
+                train_loss=avg_train,
+                val_loss=avg_val,
+                exact_match=epoch_em,
+                lr=scheduler.get_last_lr()[0],
+                star=star,
             )
 
-        if avg_val < best_val:
-            best_val = avg_val
-            ckpt = cfg.checkpoint_dir / f"model_{cfg.model_type}_best.pt"
-            torch.save(model.state_dict(), ckpt)
-
-    print(f"Done. Best val loss: {best_val:.4f}")
+    rprint(f"\n[bold green]Done.[/] Best val loss: {best_val:.4f}")
+    if all_metrics:
+        final = all_metrics[-1]  # last epoch's last batch (approximate)
+        rprint(f"Final metrics: {final}")
+    rprint(f"Checkpoint → {cfg.checkpoint_dir / f'model_{cfg.model_type}_best.pt'}")
 
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--model", choices=list(MODEL_TYPES), default="change")
+    p.add_argument("--model", choices=list(MODEL_TYPES), default=None)
     p.add_argument("--profile", default=None)
     p.add_argument("--epochs", type=int, default=None)
     p.add_argument("--batch-size", type=int, default=None)

@@ -30,6 +30,7 @@ prep = [
     "city2graph>=0.2.3",
     "httpx>=0.28.1",
     "pyarrow>=20.0.0",   # parquet I/O for geopandas
+    "rich>=14.3.2",
 ]
 pyg = [
     "torch>=2.0.0",

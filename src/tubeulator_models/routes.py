@@ -114,34 +114,48 @@ def build_dataset(
     output_path: Path | None = None,
 ) -> list[dict]:
     """Build training examples for all OD pairs. Returns list of dicts."""
+    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
+
     stations = topo.all_stations
     lines = topo.all_lines
     st2i = {s: i for i, s in enumerate(stations)}
     ln2i = {ln: i for i, ln in enumerate(lines)}
 
     examples = []
-    total = len(stations)
-    for idx, origin in enumerate(stations):
-        if idx % 25 == 0:
-            print(f"  routing from {idx}/{total} stations...")
-        for dest in stations:
-            if origin == dest:
-                continue
-            routes = find_routes(topo, origin, dest, max_transfers, max_results)
-            if not routes:
-                continue
-            best = routes[0]
-            examples.append(
-                {
-                    "origin": st2i[origin],
-                    "destination": st2i[dest],
-                    "label_line": [(ln2i[ln], d) for ln, d in best.label_line()],
-                    "label_change": [
-                        (ln2i[ln], d, st2i[st]) for ln, d, st in best.label_change()
-                    ],
-                    "label_station": [st2i[s] for s in best.label_station()],
-                }
-            )
+    n_pairs = 0
+
+    with Progress(
+        SpinnerColumn(),
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        TextColumn("[cyan]{task.completed}/{task.total} origins"),
+        TextColumn("·"),
+        TextColumn("[green]{task.fields[pairs]:,} routes"),
+        refresh_per_second=10,
+    ) as progress:
+        task = progress.add_task("Routing", total=len(stations), pairs=0)
+
+        for origin in stations:
+            for dest in stations:
+                if origin == dest:
+                    continue
+                routes = find_routes(topo, origin, dest, max_transfers, max_results)
+                if not routes:
+                    continue
+                best = routes[0]
+                n_pairs += 1
+                examples.append(
+                    {
+                        "origin": st2i[origin],
+                        "destination": st2i[dest],
+                        "label_line": [(ln2i[ln], d) for ln, d in best.label_line()],
+                        "label_change": [
+                            (ln2i[ln], d, st2i[st]) for ln, d, st in best.label_change()
+                        ],
+                        "label_station": [st2i[s] for s in best.label_station()],
+                    }
+                )
+            progress.update(task, advance=1, pairs=n_pairs)
 
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)

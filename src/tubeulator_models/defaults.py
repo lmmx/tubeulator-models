@@ -31,7 +31,7 @@ def _raw() -> dict:
 
 
 def resolve(
-    model_type: str = "change",
+    model_type: str,
     profile: str | None = None,
 ) -> dict:
     """
@@ -53,12 +53,13 @@ def resolve(
     # 2. Model-type overrides
     merged.update(raw.get("model", {}).get(model_type, {}))
 
-    # 3. Profile base scalars
-    if profile:
-        p = raw.get("profiles", {}).get(profile, {})
-        merged.update(_scalars(p))
+    # 3. Resolve active profile: explicit arg > TOML base > none
+    active_profile = profile or merged.pop("profile", None)
+    merged.pop("profile", None)  # don't pass through to TrainConfig
 
-        # 4. Profile model-type overrides
+    if active_profile:
+        p = raw.get("profiles", {}).get(active_profile, {})
+        merged.update(_scalars(p))
         merged.update(p.get("model", {}).get(model_type, {}))
 
     merged["model_type"] = model_type
@@ -87,3 +88,8 @@ def resolve_plot() -> dict:
 
 def repo_root() -> Path:
     return _REPO_ROOT
+
+
+def default_model_type() -> str:
+    """Return the default model type from TOML [base]."""
+    return _raw().get("base", {})["default_model"]
