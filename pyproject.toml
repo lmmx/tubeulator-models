@@ -10,8 +10,33 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
-tubeulator-models = "tubeulator_models:main"
+tm-build-gtfs = "tubeulator_models.cli:build_gtfs"
+tm-plot       = "tubeulator_models.cli:plot_graph"
+tm-gtfs2graph = "tubeulator_models.cli:gtfs2graph"
+tm-graph2pyg  = "tubeulator_models.cli:graph2pyg"
+tm-gtfs2pyg   = "tubeulator_models.cli:gtfs2pyg"
 
 [build-system]
 requires = ["uv_build>=0.9.26,<0.10.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+pull = [
+    "tubeulator>=0.1.3",
+]
+prep = [
+    "city2graph>=0.2.3",
+    "httpx>=0.28.1",
+    "pyarrow>=20.0.0",   # parquet I/O for geopandas
+]
+pyg = [
+    "torch>=2.0.0",
+    "torch-geometric>=2.7.0",
+]
+plot = [
+    "contextily>=1.7.0",
+    "matplotlib>=3.10.8",
+]
+
+[tool.uv]
+default-groups = ["pull", "prep", "plot", "pyg"]

@@ -1,0 +1,9 @@
+[data]
+gtfs_path    = "data/tfl_station_data_gtfs.zip"
+target_crs   = 27700
+plot_output = "data/graph/network.png"
+graph_dir    = "data/graph"     # intermediate GeoParquet output
+pyg_dir      = "data/pyg"       # final PyG .pt output
+
+[filter]
+region = "Greater London, UK"

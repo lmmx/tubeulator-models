@@ -1,10 +1,22 @@
-# Python-generated files
-__pycache__/
+**/data/db
+cache/
+
+*.egg-info
 *.py[oc]
+*.sw[op]
+.cache
+.coverage
+.coverage.*
+.eggs
+.ipynb_checkpoints
+.pdm-python
+.pytest_cache/
+.tox
+.venv
+__pycache__/
+_build
 build/
 dist/
+site/
+version.py
 wheels/
-*.egg-info
-
-# Virtual environments
-.venv
