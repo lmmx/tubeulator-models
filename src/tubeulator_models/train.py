@@ -24,8 +24,9 @@ def _compute_loss(
     logits: dict,
     labels: torch.Tensor,
     model_type: str,
+    label_smoothing: float = 0.0,
 ) -> torch.Tensor:
-    ce = nn.CrossEntropyLoss(ignore_index=PAD)
+    ce = nn.CrossEntropyLoss(ignore_index=PAD, label_smoothing=label_smoothing)
     stride = {"line": 2, "change": 3}
 
     if model_type in ("line", "change"):
@@ -182,8 +183,14 @@ def train(cfg: TrainConfig) -> None:
                     origins,
                     dests,
                     labels=labels,
+                    sampling_p=cfg.scheduled_sampling,
                 )
-                loss = _compute_loss(logits, labels, cfg.model_type)
+                loss = _compute_loss(
+                    logits,
+                    labels,
+                    cfg.model_type,
+                    label_smoothing=cfg.label_smoothing,
+                )
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -210,8 +217,14 @@ def train(cfg: TrainConfig) -> None:
                         origins,
                         dests,
                         labels=labels,
+                        sampling_p=cfg.scheduled_sampling,
                     )
-                    vl = _compute_loss(logits, labels, cfg.model_type)
+                    vl = _compute_loss(
+                        logits,
+                        labels,
+                        cfg.model_type,
+                        label_smoothing=cfg.label_smoothing,
+                    )
                     val_loss += vl.item() * origins.size(0)
 
                     all_metrics.append(

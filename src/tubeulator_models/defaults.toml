@@ -19,6 +19,9 @@ seed = 42
 log_every = 5
 num_workers = 4
 pin_memory = true
+warmup_ratio = 0.1
+label_smoothing = 0.1
+scheduled_sampling = 0.5
 
 # ── Route enumeration ────────────────────────────────────────
 max_transfers = 2

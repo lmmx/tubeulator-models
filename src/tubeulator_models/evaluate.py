@@ -15,18 +15,18 @@ __all__ = ["RouteMetrics", "compute_metrics"]
 @dataclass
 class RouteMetrics:
     exact_match: float
-    line_acc: float
-    dir_acc: float
-    station_acc: float | None  # only for change/station models
+    line_acc: float | None
+    dir_acc: float | None
+    station_acc: float | None
     topologically_valid: float
     n_examples: int
 
     def __str__(self) -> str:
-        parts = [
-            f"exact={self.exact_match:.1%}",
-            f"line={self.line_acc:.1%}",
-            f"dir={self.dir_acc:.1%}",
-        ]
+        parts = [f"exact={self.exact_match:.1%}"]
+        if self.line_acc is not None:
+            parts.append(f"line={self.line_acc:.1%}")
+        if self.dir_acc is not None:
+            parts.append(f"dir={self.dir_acc:.1%}")
         if self.station_acc is not None:
             parts.append(f"station={self.station_acc:.1%}")
         parts.append(f"valid={self.topologically_valid:.1%}")
@@ -197,8 +197,8 @@ def compute_metrics(
 
     return RouteMetrics(
         exact_match=em_c / max(em_t, 1),
-        line_acc=line_c / max(line_t, 1),
-        dir_acc=dir_c / max(dir_t, 1),
+        line_acc=line_c / max(line_t, 1) if line_t > 0 else None,
+        dir_acc=dir_c / max(dir_t, 1) if dir_t > 0 else None,
         station_acc=(station_c / max(station_t, 1)) if station_t > 0 else None,
         topologically_valid=val_c / max(val_t, 1),
         n_examples=em_t,

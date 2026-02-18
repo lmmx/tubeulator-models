@@ -32,7 +32,13 @@ class LineSeqDecoder(nn.Module):
         self.dir_emb = nn.Embedding(2, d_model // 2)
         self.stop_token = nn.Linear(d_model, 1)  # predict whether to stop
 
-    def forward(self, h_origin: torch.Tensor, h_dest: torch.Tensor, labels=None):
+    def forward(
+        self,
+        h_origin: torch.Tensor,
+        h_dest: torch.Tensor,
+        labels=None,
+        sampling_p: float = 0.0,
+    ):
         """
         h_origin, h_dest: (B, d_model)
         labels: (B, max_steps*2) flattened [line, dir, line, dir, ...] or None for inference.
@@ -46,26 +52,33 @@ class LineSeqDecoder(nn.Module):
         all_stop_logits = []
 
         for step in range(self.max_legs):
-            h = self.gru(h, h)  # input=hidden for autoregressive
+            h = self.gru(h, h)
             all_line_logits.append(self.line_head(h))
             all_dir_logits.append(self.dir_head(h))
             all_stop_logits.append(self.stop_token(h))
 
-            # teacher forcing or greedy feedback
-            if labels is not None and step * 2 + 1 < labels.size(1):
+            use_own = self.training and torch.rand(1).item() < sampling_p
+
+            if labels is not None and step * 2 + 1 < labels.size(1) and not use_own:
                 ln_tok = labels[:, step * 2].clamp(min=0)
                 dir_tok = labels[:, step * 2 + 1].clamp(min=0)
             else:
                 ln_tok = all_line_logits[-1].argmax(-1)
                 dir_tok = all_dir_logits[-1].argmax(-1)
 
-            feedback = torch.cat([self.line_emb(ln_tok), self.dir_emb(dir_tok)], dim=-1)
-            h = h + feedback  # residual feedback
+            feedback = torch.cat(
+                [
+                    self.line_emb(ln_tok),
+                    self.dir_emb(dir_tok),
+                ],
+                dim=-1,
+            )
+            h = h + feedback
 
         return {
-            "line": torch.stack(all_line_logits, dim=1),  # (B, max_legs, n_lines)
-            "dir": torch.stack(all_dir_logits, dim=1),  # (B, max_legs, 2)
-            "stop": torch.stack(all_stop_logits, dim=1),  # (B, max_legs, 1)
+            "line": torch.stack(all_line_logits, dim=1),
+            "dir": torch.stack(all_dir_logits, dim=1),
+            "stop": torch.stack(all_stop_logits, dim=1),
         }
 
 
@@ -93,7 +106,7 @@ class InterchangeDecoder(nn.Module):
         self.station_emb = nn.Embedding(n_stations, d_model - 2 * d_fb)
         self.fb_proj = nn.Linear(d_model, d_model)
 
-    def forward(self, h_origin, h_dest, labels=None):
+    def forward(self, h_origin, h_dest, labels=None, sampling_p: float = 0.0):
         # B = h_origin.size(0)
         h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
 
@@ -105,7 +118,9 @@ class InterchangeDecoder(nn.Module):
             all_dir.append(self.dir_head(h))
             all_st.append(self.station_head(h))
 
-            if labels is not None and step * 3 + 2 < labels.size(1):
+            use_own = self.training and torch.rand(1).item() < sampling_p
+
+            if labels is not None and step * 3 + 2 < labels.size(1) and not use_own:
                 ln_tok = labels[:, step * 3].clamp(min=0)
                 dir_tok = labels[:, step * 3 + 1].clamp(min=0)
                 st_tok = labels[:, step * 3 + 2].clamp(min=0)
@@ -150,7 +165,7 @@ class StationSeqDecoder(nn.Module):
         self.query_proj = nn.Linear(d_model, d_model)
         self.key_proj = nn.Linear(d_model, d_model)
 
-    def forward(self, h_origin, h_dest, H_all, labels=None):
+    def forward(self, h_origin, h_dest, H_all, labels=None, sampling_p: float = 0.0):
         """
         H_all: (N, d_model) — all node embeddings from encoder (shared across batch).
         We compute pointer logits over these.
@@ -168,7 +183,9 @@ class StationSeqDecoder(nn.Module):
             logits = torch.matmul(q, keys.t())  # (B, N)
             all_logits.append(logits)
 
-            if labels is not None and step < labels.size(1):
+            use_own = self.training and torch.rand(1).item() < sampling_p
+
+            if labels is not None and step < labels.size(1) and not use_own:
                 tok = labels[:, step].clamp(min=0)
             else:
                 tok = logits.argmax(-1)

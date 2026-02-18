@@ -71,12 +71,13 @@ class RouteModel(nn.Module):
         origins,
         dests,
         labels=None,
+        sampling_p: float = 0.0,
     ):
         H = self.encoder(graph_x, graph_edge_index, graph_edge_attr)
         h_o = H[origins]
         h_d = H[dests]
 
         if self.model_type == "station":
-            return self.decoder(h_o, h_d, H, labels=labels)
+            return self.decoder(h_o, h_d, H, labels=labels, sampling_p=sampling_p)
         else:
-            return self.decoder(h_o, h_d, labels=labels)
+            return self.decoder(h_o, h_d, labels=labels, sampling_p=sampling_p)
