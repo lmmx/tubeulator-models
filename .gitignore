@@ -1,5 +1,6 @@
 **/data/db
 cache/
+checkpoints/
 
 *.egg-info
 *.py[oc]

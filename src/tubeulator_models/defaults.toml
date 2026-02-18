@@ -1,9 +1,81 @@
+[base]
+profile = "dev"
+default_model = "change"
+
+# ── Encoder ───────────────────────────────────────────────────
+d_model = 128
+n_heads = 4
+n_enc_layers = 3
+dropout = 0.1
+
+# ── Training ──────────────────────────────────────────────────
+epochs = 100
+batch_size = 256
+lr = 3e-4
+weight_decay = 1e-4
+grad_clip = 1.0
+val_split = 0.1
+seed = 42
+log_every = 5
+num_workers = 4
+pin_memory = true
+warmup_ratio = 0.1
+label_smoothing = 0.1
+scheduled_sampling = 0.5
+
+# ── Route enumeration ────────────────────────────────────────
+max_transfers = 2
+max_routes_per_od = 3
+
+# ── Data paths (relative to repo root) ───────────────────────
 [data]
-gtfs_path    = "data/tfl_station_data_gtfs.zip"
-target_crs   = 27700
-plot_output = "data/graph/network.png"
-graph_dir    = "data/graph"     # intermediate GeoParquet output
-pyg_dir      = "data/pyg"       # final PyG .pt output
+gtfs_path = "data/tfl_station_data_gtfs.zip"
+graph_dir = "data/graph"
+pyg_dir = "data/pyg"
+routes_path = "data/routes.json"
+checkpoint_dir = "checkpoints"
+target_crs = 27700
 
 [filter]
-region = "Greater London, UK"
+region = "Greater London"
+
+[analysis]
+calendar_start = ""
+calendar_end = ""
+
+[plot]
+output = "data/graph/network.png"
+dpi = 150
+title = "London Tube Network — travel time (colour) & frequency (width)"
+
+# ── Model-specific overrides ─────────────────────────────────
+[model.line]
+max_seq = 4
+
+[model.change]
+max_seq = 4
+
+[model.station]
+max_seq = 40
+
+# ── Profiles ─────────────────────────────────────────────────
+[profiles.dev]
+epochs = 20
+batch_size = 512
+lr = 5e-4
+
+[profiles.dev.model.station]
+batch_size = 128
+
+[profiles.full]
+epochs = 200
+lr = 1e-4
+d_model = 256
+n_heads = 8
+n_enc_layers = 4
+dropout = 0.05
+weight_decay = 5e-5
+
+[profiles.full.model.station]
+max_seq = 50
+batch_size = 128
