@@ -1,22 +1,88 @@
-"""Resolve configuration from defaults.toml."""
+"""Layered HP defaults from TOML: base → model type → profile → overrides."""
 
 from __future__ import annotations
 
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
-__all__ = ["resolve", "repo_root"]
+
+__all__ = [
+    "resolve",
+    "resolve_data",
+    "resolve_filter",
+    "resolve_analysis",
+    "resolve_plot",
+    "repo_root",
+]
 
 _TOML = Path(__file__).with_name("defaults.toml")
-
-# src/tubeulator_models -> src -> repo root
 _REPO_ROOT = Path(__file__).parents[2]
 
+MODEL_TYPES = ("line", "change", "station")
 
-def resolve(section: str | None = None) -> dict:
-    """Return the full config dict, or a specific top-level section."""
-    raw = tomllib.loads(_TOML.read_text())
-    return raw if section is None else raw.get(section, {})
+
+def _scalars(d: dict) -> dict:
+    """Keep only scalar (non-table) values from a TOML section."""
+    return {k: v for k, v in d.items() if not isinstance(v, dict)}
+
+
+def _raw() -> dict:
+    return tomllib.loads(_TOML.read_text())
+
+
+def resolve(
+    model_type: str = "change",
+    profile: str | None = None,
+) -> dict:
+    """
+    Merge base → model.<type> → profile → profile.model.<type>.
+
+    Returns a flat dict suitable for unpacking into TrainConfig.
+    """
+    raw = _raw()
+
+    if model_type not in MODEL_TYPES:
+        raise ValueError(
+            f"Unknown model_type {model_type!r}, expected one of {MODEL_TYPES}"
+        )
+
+    # 1. Base scalars
+    merged: dict = {}
+    merged.update(_scalars(raw.get("base", {})))
+
+    # 2. Model-type overrides
+    merged.update(raw.get("model", {}).get(model_type, {}))
+
+    # 3. Profile base scalars
+    if profile:
+        p = raw.get("profiles", {}).get(profile, {})
+        merged.update(_scalars(p))
+
+        # 4. Profile model-type overrides
+        merged.update(p.get("model", {}).get(model_type, {}))
+
+    merged["model_type"] = model_type
+    return merged
+
+
+def resolve_data() -> dict:
+    """Return the [data] section."""
+    return _raw().get("data", {})
+
+
+def resolve_filter() -> dict:
+    """Return the [filter] section."""
+    return _raw().get("filter", {})
+
+
+def resolve_analysis() -> dict:
+    """Return the [analysis] section."""
+    return _raw().get("analysis", {})
+
+
+def resolve_plot() -> dict:
+    """Return the [plot] section."""
+    return _raw().get("plot", {})
 
 
 def repo_root() -> Path:

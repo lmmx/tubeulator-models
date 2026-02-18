@@ -10,11 +10,13 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
-tm-build-gtfs = "tubeulator_models.cli:build_gtfs"
-tm-plot       = "tubeulator_models.cli:plot_graph"
-tm-gtfs2graph = "tubeulator_models.cli:gtfs2graph"
-tm-graph2pyg  = "tubeulator_models.cli:graph2pyg"
-tm-gtfs2pyg   = "tubeulator_models.cli:gtfs2pyg"
+tm-build-gtfs   = "tubeulator_models.cli:build_gtfs"
+tm-build-routes = "tubeulator_models.cli:build_routes"
+tm-plot         = "tubeulator_models.cli:plot_graph"
+tm-gtfs2graph   = "tubeulator_models.cli:gtfs2graph"
+tm-graph2pyg    = "tubeulator_models.cli:graph2pyg"
+tm-gtfs2pyg     = "tubeulator_models.cli:gtfs2pyg"
+tm-train        = "tubeulator_models.train:main"
 
 [build-system]
 requires = ["uv_build>=0.9.26,<0.10.0"]
@@ -37,6 +39,20 @@ plot = [
     "contextily>=1.7.0",
     "matplotlib>=3.10.8",
 ]
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = ["C408", "C901", "E501", "E722", "E741"]
+select = ["C", "E", "F", "I", "UP", "W"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["tubeulator_models"]
+lines-after-imports = 2
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E401", "F401"]
 
 [tool.uv]
 default-groups = ["pull", "prep", "plot", "pyg"]

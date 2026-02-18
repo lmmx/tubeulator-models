@@ -10,6 +10,7 @@ from pathlib import Path
 
 import tubeulator as tube
 
+
 SCHEDULE_MAP = {
     "monday - friday": "MTF",
     "monday to friday": "MTF",

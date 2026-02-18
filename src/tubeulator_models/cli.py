@@ -4,23 +4,41 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .defaults import repo_root, resolve
+from .defaults import repo_root, resolve_data, resolve_plot
 
-__all__ = ["gtfs2graph", "graph2pyg", "gtfs2pyg"]
+
+__all__ = [
+    "build_gtfs",
+    "build_routes",
+    "plot_graph",
+    "gtfs2graph",
+    "graph2pyg",
+    "gtfs2pyg",
+]
 
 
 def _graph_paths() -> tuple[Path, Path]:
-    cfg = resolve("data")
+    cfg = resolve_data()
     base = repo_root() / cfg["graph_dir"]
     base.mkdir(parents=True, exist_ok=True)
     return base / "nodes.parquet", base / "edges.parquet"
 
 
 def _pyg_path() -> Path:
-    cfg = resolve("data")
+    cfg = resolve_data()
     base = repo_root() / cfg["pyg_dir"]
     base.mkdir(parents=True, exist_ok=True)
     return base / "london_transit.pt"
+
+
+def build_gtfs() -> None:
+    """Fetch timetables from TfL API and write a GTFS zip."""
+    from .gtfs_builder import build_gtfs as _build
+
+    cfg = resolve_data()
+    out = repo_root() / cfg["gtfs_path"]
+    print(f"Building GTFS from TfL API → {out}")
+    _build(out)
 
 
 def gtfs2graph() -> None:
@@ -32,9 +50,7 @@ def gtfs2graph() -> None:
 
     nodes_path, edges_path = _graph_paths()
     nodes.to_parquet(nodes_path)
-    edges.reset_index().to_parquet(
-        edges_path
-    )  # reset so MultiIndex survives parquet round-trip
+    edges.reset_index().to_parquet(edges_path)
     print(f"Saved {len(nodes):,} nodes → {nodes_path}")
     print(f"Saved {len(edges):,} edges → {edges_path}")
 
@@ -73,14 +89,21 @@ def gtfs2pyg() -> None:
     graph2pyg()
 
 
-def build_gtfs() -> None:
-    """Fetch timetables from TfL API and write a GTFS zip."""
-    from .gtfs_builder import build_gtfs as _build
+def build_routes() -> None:
+    """Enumerate routes for all OD pairs and save training data."""
+    from .config import TrainConfig
+    from .routes import build_dataset
+    from .topology import extract
 
-    cfg = resolve("data")
-    out = repo_root() / cfg["gtfs_path"]
-    print(f"Building GTFS from TfL API → {out}")
-    _build(out)
+    cfg = TrainConfig.from_defaults()
+    topo = extract(cfg.gtfs_path)
+    print(f"Topology: {topo.n_stations} stations, {topo.n_lines} lines")
+    build_dataset(
+        topo,
+        max_transfers=cfg.max_transfers,
+        max_results=cfg.max_routes_per_od,
+        output_path=cfg.routes_path,
+    )
 
 
 def plot_graph() -> None:
@@ -91,6 +114,6 @@ def plot_graph() -> None:
     if not nodes_path.exists() or not edges_path.exists():
         raise FileNotFoundError("Run tm-gtfs2graph first.")
 
-    cfg = resolve("data")
-    out = repo_root() / cfg.get("plot_output", "data/graph/network.png")
+    cfg = resolve_plot()
+    out = repo_root() / cfg["output"]
     plot_transit_graph(nodes_path, edges_path, output_path=out)

@@ -8,15 +8,15 @@ import city2graph as c2g
 import geopandas as gpd
 import osmnx as ox
 
-from .defaults import repo_root, resolve
+from .defaults import repo_root, resolve_analysis, resolve_data, resolve_filter
+
 
 __all__ = ["load_gtfs", "build_travel_graph", "filter_to_region", "load_london_graph"]
 
 
 def load_gtfs() -> dict:
     """Parse the GTFS zip from the path declared in defaults.toml."""
-    cfg = resolve("data")
-    path = repo_root() / cfg["gtfs_path"]
+    path = repo_root() / resolve_data()["gtfs_path"]
     return c2g.load_gtfs(path)
 
 
@@ -26,7 +26,7 @@ def build_travel_graph(
     calendar_end: str,
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """Summarise trips into stop-level nodes and edges, projected to target CRS."""
-    crs = resolve("data")["target_crs"]
+    crs = resolve_data()["target_crs"]
     nodes, edges = c2g.travel_summary_graph(
         gtfs_data,
         calendar_start=calendar_start,
@@ -41,16 +41,12 @@ def filter_to_region(
     region: str | None = None,
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """Clip nodes and edges to a named region boundary (via OSMnx geocoding)."""
-    cfg_data = resolve("data")
-    cfg_filter = resolve("filter")
-    crs = cfg_data["target_crs"]
-
-    boundary = ox.geocode_to_gdf(region or cfg_filter["region"]).to_crs(epsg=crs)
+    crs = resolve_data()["target_crs"]
+    boundary = ox.geocode_to_gdf(region or resolve_filter()["region"]).to_crs(epsg=crs)
 
     nodes_in = gpd.sjoin(nodes, boundary, how="inner").drop(columns=["index_right"])
     edges_in = gpd.sjoin(edges, boundary, how="inner").drop(columns=["index_right"])
 
-    # Drop edges whose endpoints are no longer in the node set
     from_ok = edges_in.index.get_level_values("from_stop_id").isin(nodes_in.index)
     to_ok = edges_in.index.get_level_values("to_stop_id").isin(nodes_in.index)
     edges_in = edges_in[from_ok & to_ok]
@@ -63,7 +59,7 @@ def load_london_graph(
     calendar_end: str | None = None,
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """End-to-end convenience: load → summarise → filter to Greater London."""
-    cfg = resolve("analysis")
+    cfg = resolve_analysis()
     today = date.today().strftime("%Y%m%d")
     start = calendar_start or cfg.get("calendar_start") or today
     end = calendar_end or cfg.get("calendar_end") or today
