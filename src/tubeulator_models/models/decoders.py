@@ -227,8 +227,9 @@ class StationSeqDecoder(nn.Module):
             q = self.query_proj(h)  # (B, d)
             logits = torch.matmul(q, keys.t())  # (B, N)
 
-            # Mask to adjacent stations only
-            if self.adj_mask is not None:
+            # Mask to adjacent stations only (inference only — training
+            # uses scheduled sampling which breaks the adjacency chain)
+            if self.adj_mask is not None and not self.training:
                 mask = self.adj_mask[current]  # (B, N)
                 logits = logits.masked_fill(~mask, float("-inf"))
 

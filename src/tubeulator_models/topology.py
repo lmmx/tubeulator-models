@@ -174,13 +174,13 @@ def extract(gtfs_path: Path) -> Topology:
 
 
 def build_adj_mask(topo: Topology, stations: list[str]) -> torch.Tensor:
-    """Build (N, N) boolean adjacency tensor: mask[i, j] = True if j is a
-    neighbor of i on any line."""
     import torch
 
     st2i = {s: i for i, s in enumerate(stations)}
     N = len(stations)
     mask = torch.zeros(N, N, dtype=torch.bool)
+    for i in range(N):
+        mask[i, i] = True  # self-loop: sequence starts at origin
     for adj in topo.line_adj.values():
         for station, neighbors in adj.items():
             i = st2i.get(station)
