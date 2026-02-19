@@ -57,7 +57,7 @@ max_seq = 4
 
 [model.station]
 max_seq = 40
-label_smoothing = 0.05
+label_smoothing = 0.0
 
 # ── Profiles ─────────────────────────────────────────────────
 [profiles.dev]
