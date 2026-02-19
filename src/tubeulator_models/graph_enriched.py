@@ -1,4 +1,4 @@
-"""Build an enriched PyG graph with line-identity edge features."""
+"""Build an enriched PyG graph with line identity + travel time edge features."""
 
 from __future__ import annotations
 
@@ -21,17 +21,13 @@ def build_enriched_graph(
     Node features (4):
         [norm_x, norm_y, n_lines_serving, is_interchange]
 
-    Edge features (n_lines):
-        one-hot line identity
-
-    If node_coords is None, uses index-based placeholder coords
-    (fine for training — the GNN gets structural info from topology anyway).
+    Edge features (n_lines + 1):
+        [one_hot_line..., normalised_travel_time]
     """
     stations = topo.all_stations
     lines = topo.all_lines
     st2i = {s: i for i, s in enumerate(stations)}
     ln2i = {ln: i for i, ln in enumerate(lines)}
-    # N = len(stations)
     L = len(lines)
 
     # --- node features ---
@@ -46,16 +42,34 @@ def build_enriched_graph(
         feats.append([x, y, float(n_lines), is_ix])
 
     x = torch.tensor(feats, dtype=torch.float)
-    # normalise coords if they're real
     if node_coords:
         x[:, :2] = (x[:, :2] - x[:, :2].mean(0)) / (x[:, :2].std(0) + 1e-8)
 
-    # --- edges with line identity ---
+    # --- edges with line identity + travel time ---
     src, dst, attrs = [], [], []
+    all_times = []
+
+    # First pass: collect all travel times for normalisation
+    for line in lines:
+        adj = topo.line_adj.get(line, {})
+        for station_a, neighbors in adj.items():
+            if station_a not in st2i:
+                continue
+            for station_b in neighbors:
+                if station_b not in st2i:
+                    continue
+                tt = topo.travel_time(line, station_a, station_b)
+                all_times.append(tt)
+
+    time_mean = sum(all_times) / max(len(all_times), 1)
+    time_std = (
+        sum((t - time_mean) ** 2 for t in all_times) / max(len(all_times), 1)
+    ) ** 0.5
+    time_std = max(time_std, 1e-8)
+
+    # Second pass: build edge tensors
     for line in lines:
         li = ln2i[line]
-        one_hot = [0.0] * L
-        one_hot[li] = 1.0
         adj = topo.line_adj.get(line, {})
         for station_a, neighbors in adj.items():
             if station_a not in st2i:
@@ -65,7 +79,14 @@ def build_enriched_graph(
                     continue
                 src.append(st2i[station_a])
                 dst.append(st2i[station_b])
-                attrs.append(one_hot)
+
+                one_hot = [0.0] * L
+                one_hot[li] = 1.0
+
+                tt = topo.travel_time(line, station_a, station_b)
+                norm_tt = (tt - time_mean) / time_std
+
+                attrs.append(one_hot + [norm_tt])
 
     edge_index = torch.tensor([src, dst], dtype=torch.long)
     edge_attr = torch.tensor(attrs, dtype=torch.float)

@@ -15,7 +15,7 @@ class GATEncoder(nn.Module):
     Multi-layer GATv2 encoder.
 
     Node features:  [norm_easting, norm_northing, n_lines, is_interchange]  (4-dim)
-    Edge features:  one-hot line id  (n_lines-dim)
+    Edge features:  one-hot line id  ((n_lines+1)-dim)
 
     Produces H ∈ R^{N × d_model}.
     """

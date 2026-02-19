@@ -23,9 +23,14 @@ warmup_ratio = 0.1
 label_smoothing = 0.1
 scheduled_sampling = 0.5
 
+# ── Inference ────────────────────────────────────────────────
+beam_eval_interval = 0 # 0 = final epoch only, >0 = every N epochs
+beam_width = 5
+
 # ── Route enumeration ────────────────────────────────────────
 max_transfers = 2
 max_routes_per_od = 3
+transfer_penalty = 240 # 240 seconds = 4 mins (3-5 mins)
 
 # ── Data paths (relative to repo root) ───────────────────────
 [data]
