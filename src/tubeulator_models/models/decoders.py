@@ -30,7 +30,10 @@ class LineSeqDecoder(nn.Module):
         # feedback embeddings
         self.line_emb = nn.Embedding(n_lines, d_model // 2)
         self.dir_emb = nn.Embedding(2, d_model // 2)
-        self.stop_token = nn.Linear(d_model, 1)  # predict whether to stop
+        self.stop_token = nn.Linear(d_model, 1)
+
+        # learned start token — first GRU input before any predictions exist
+        self.start_input = nn.Parameter(torch.zeros(1, d_model))
 
     def forward(
         self,
@@ -39,15 +42,10 @@ class LineSeqDecoder(nn.Module):
         labels=None,
         sampling_p: float = 0.0,
     ):
-        """
-        h_origin, h_dest: (B, d_model)
-        labels: (B, max_steps*2) flattened [line, dir, line, dir, ...] or None for inference.
-        Returns dict of logits tensors.
-        """
         device = h_origin.device
+        B = h_origin.size(0)
         h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
 
-        # Generate mask directly on device — no CPU→GPU copy inside compiled region
         if self.training and sampling_p > 0.0:
             use_own = torch.rand(self.max_legs, device=device) < sampling_p
         else:
@@ -57,8 +55,10 @@ class LineSeqDecoder(nn.Module):
         all_dir_logits = []
         all_stop_logits = []
 
+        gru_input = self.start_input.expand(B, -1)
+
         for step in range(self.max_legs):
-            h = self.gru(h, h)
+            h = self.gru(gru_input, h)
             line_logits = self.line_head(h)
             dir_logits = self.dir_head(h)
             all_line_logits.append(line_logits)
@@ -77,14 +77,11 @@ class LineSeqDecoder(nn.Module):
                 ln_tok = own_ln
                 dir_tok = own_dir
 
-            feedback = torch.cat(
-                [
-                    self.line_emb(ln_tok),
-                    self.dir_emb(dir_tok),
-                ],
+            # feedback becomes next step's GRU input (not residual-added to h)
+            gru_input = torch.cat(
+                [self.line_emb(ln_tok), self.dir_emb(dir_tok)],
                 dim=-1,
             )
-            h = h + feedback
 
         return {
             "line": torch.stack(all_line_logits, dim=1),
@@ -97,6 +94,10 @@ class InterchangeDecoder(nn.Module):
     """
     Model B — predicts [(line, direction, station), ...] per leg.
     The station prediction is the exit/interchange station for that leg.
+
+    Supports an optional (n_lines, n_stations) mask that constrains the
+    station head to only stations served by the predicted line — same
+    principle as the station model's adjacency mask.
     """
 
     def __init__(self, d_model: int, n_lines: int, n_stations: int, max_legs: int = 4):
@@ -117,8 +118,18 @@ class InterchangeDecoder(nn.Module):
         self.station_emb = nn.Embedding(n_stations, d_model - 2 * d_fb)
         self.fb_proj = nn.Linear(d_model, d_model)
 
+        self.start_input = nn.Parameter(torch.zeros(1, d_model))
+
+        # (n_lines, n_stations) boolean mask, set via set_line_station_mask
+        self.register_buffer("line_station_mask", None)
+
+    def set_line_station_mask(self, mask: torch.Tensor) -> None:
+        """Set the line→station mask. mask[l, s] = True iff station s is on line l."""
+        self.line_station_mask = mask
+
     def forward(self, h_origin, h_dest, labels=None, sampling_p: float = 0.0):
         device = h_origin.device
+        B = h_origin.size(0)
         h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
 
         if self.training and sampling_p > 0.0:
@@ -128,18 +139,16 @@ class InterchangeDecoder(nn.Module):
 
         all_ln, all_dir, all_st = [], [], []
 
+        gru_input = self.start_input.expand(B, -1)
+
         for step in range(self.max_legs):
-            h = self.gru(h, h)
+            h = self.gru(gru_input, h)
             ln_logits = self.line_head(h)
             dir_logits = self.dir_head(h)
             st_logits = self.station_head(h)
-            all_ln.append(ln_logits)
-            all_dir.append(dir_logits)
-            all_st.append(st_logits)
 
             own_ln = ln_logits.argmax(-1)
             own_dir = dir_logits.argmax(-1)
-            own_st = st_logits.argmax(-1)
 
             if labels is not None and step * 3 + 2 < labels.size(1):
                 teacher_ln = labels[:, step * 3].clamp(min=0)
@@ -147,10 +156,28 @@ class InterchangeDecoder(nn.Module):
                 teacher_st = labels[:, step * 3 + 2].clamp(min=0)
                 ln_tok = torch.where(use_own[step], own_ln, teacher_ln)
                 dir_tok = torch.where(use_own[step], own_dir, teacher_dir)
-                st_tok = torch.where(use_own[step], own_st, teacher_st)
+                # mask follows teacher's line during training (same principle
+                # as adjacency masking: teacher sequence is always valid, so
+                # the correct station is always unmasked)
+                mask_ln = teacher_ln
             else:
                 ln_tok = own_ln
                 dir_tok = own_dir
+                mask_ln = own_ln
+
+            # constrain station head to stations on the selected line
+            if self.line_station_mask is not None:
+                line_mask = self.line_station_mask[mask_ln]  # (B, n_stations)
+                st_logits = st_logits.masked_fill(~line_mask, -1e4)
+
+            all_ln.append(ln_logits)
+            all_dir.append(dir_logits)
+            all_st.append(st_logits)
+
+            own_st = st_logits.argmax(-1)
+            if labels is not None and step * 3 + 2 < labels.size(1):
+                st_tok = torch.where(use_own[step], own_st, teacher_st)
+            else:
                 st_tok = own_st
 
             fb = torch.cat(
@@ -161,7 +188,7 @@ class InterchangeDecoder(nn.Module):
                 ],
                 dim=-1,
             )
-            h = h + self.fb_proj(fb)
+            gru_input = self.fb_proj(fb)
 
         return {
             "line": torch.stack(all_ln, dim=1),
@@ -190,6 +217,8 @@ class StationSeqDecoder(nn.Module):
         self.query_proj = nn.Linear(d_model, d_model)
         self.key_proj = nn.Linear(d_model, d_model)
 
+        self.start_input = nn.Parameter(torch.zeros(1, d_model))
+
         # (N, N) boolean mask, set via set_adj_mask before training
         self.register_buffer("adj_mask", None)
 
@@ -206,6 +235,7 @@ class StationSeqDecoder(nn.Module):
         sampling_p: float = 0.0,
     ):
         device = h_origin.device
+        B = h_origin.size(0)
         h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
 
         keys = self.key_proj(H_all)  # (N, d)
@@ -218,8 +248,10 @@ class StationSeqDecoder(nn.Module):
         current = origins  # (B,)
         all_logits = []
 
+        gru_input = self.start_input.expand(B, -1)
+
         for step in range(self.max_len):
-            h = self.gru(h, h)
+            h = self.gru(gru_input, h)
             q = self.query_proj(h)
             logits = torch.matmul(q, keys.t())
 
@@ -240,6 +272,6 @@ class StationSeqDecoder(nn.Module):
                 tok = own_tok
                 current = tok
 
-            h = h + self.station_emb(tok)
+            gru_input = self.station_emb(tok)
 
         return {"station": torch.stack(all_logits, dim=1)}

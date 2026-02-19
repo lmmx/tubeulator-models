@@ -62,14 +62,14 @@ def _beam_structured_batched(
         hd = h_d[b].unsqueeze(0)
         h_init = torch.relu(dec.init_proj(torch.cat([ho, hd], dim=-1)))
 
-        # beams: (K, d), sequences: list of K lists, log_probs: (K,)
         h = h_init  # (1, d)
+        gru_input = dec.start_input.expand(1, -1)  # (1, d)
         seqs: list[list[int]] = [[]]
         lps = torch.zeros(1, device=device)
 
         for step in range(max_legs):
             K = h.size(0)
-            h_next = dec.gru(h, h)  # (K, d)
+            h_next = dec.gru(gru_input, h)  # (K, d)
 
             line_lp = F.log_softmax(dec.line_head(h_next), dim=-1)  # (K, n_lines)
             dir_lp = F.log_softmax(dec.dir_head(h_next), dim=-1)  # (K, 2)
@@ -77,31 +77,37 @@ def _beam_structured_batched(
             k_line = min(beam_width, line_lp.size(-1))
 
             if model_type == "change":
-                st_lp = F.log_softmax(dec.station_head(h_next), dim=-1)
-                k_st = min(beam_width, st_lp.size(-1))
+                st_raw = dec.station_head(h_next)  # (K, n_stations) — raw logits
+                k_st = min(beam_width, st_raw.size(-1))
 
-                # For each beam, compute joint scores over top-k combinations
-                top_ln = line_lp.topk(k_line, dim=-1)  # vals/idx: (K, k_line)
-                top_dir = dir_lp.topk(2, dim=-1)  # vals/idx: (K, 2)
-                top_st = st_lp.topk(k_st, dim=-1)  # vals/idx: (K, k_st)
+                top_ln = line_lp.topk(k_line, dim=-1)
+                top_dir = dir_lp.topk(2, dim=-1)
 
-                # Enumerate all combos: K * k_line * 2 * k_st candidates
                 cand_h = []
+                cand_fb = []
                 cand_seqs = []
                 cand_lps = []
 
                 for ki in range(K):
                     for li in range(k_line):
+                        ln_tok = top_ln.indices[ki, li]
+
+                        # per-line station masking: apply mask then softmax
+                        masked = st_raw[ki].clone()
+                        if dec.line_station_mask is not None:
+                            masked[~dec.line_station_mask[ln_tok]] = -1e4
+                        st_lp = F.log_softmax(masked, dim=-1)
+                        local_top_st = st_lp.topk(k_st, dim=-1)
+
                         for di in range(2):
                             for si in range(k_st):
-                                ln_tok = top_ln.indices[ki, li]
                                 dir_tok = top_dir.indices[ki, di]
-                                st_tok = top_st.indices[ki, si]
+                                st_tok = local_top_st.indices[si]
                                 score = (
                                     lps[ki].item()
                                     + top_ln.values[ki, li].item()
                                     + top_dir.values[ki, di].item()
-                                    + top_st.values[ki, si].item()
+                                    + local_top_st.values[si].item()
                                 )
 
                                 fb = torch.cat(
@@ -112,9 +118,10 @@ def _beam_structured_batched(
                                     ],
                                     dim=-1,
                                 )
-                                h_fb = h_next[ki].unsqueeze(0) + dec.fb_proj(fb)
+                                fb_out = dec.fb_proj(fb)
 
-                                cand_h.append(h_fb)
+                                cand_h.append(h_next[ki].unsqueeze(0))
+                                cand_fb.append(fb_out)
                                 cand_seqs.append(
                                     seqs[ki]
                                     + [ln_tok.item(), dir_tok.item(), st_tok.item()]
@@ -127,6 +134,7 @@ def _beam_structured_batched(
                 top_dir = dir_lp.topk(2, dim=-1)
 
                 cand_h = []
+                cand_fb = []
                 cand_seqs = []
                 cand_lps = []
 
@@ -148,10 +156,12 @@ def _beam_structured_batched(
                                 ],
                                 dim=-1,
                             )
-                            h_fb = h_next[ki].unsqueeze(0) + fb
 
-                            cand_h.append(h_fb)
-                            cand_seqs.append(seqs[ki] + [ln_tok.item(), dir_tok.item()])
+                            cand_h.append(h_next[ki].unsqueeze(0))
+                            cand_fb.append(fb)
+                            cand_seqs.append(
+                                seqs[ki] + [ln_tok.item(), dir_tok.item()]
+                            )
                             cand_lps.append(score)
 
             # Prune to top beam_width
@@ -163,6 +173,7 @@ def _beam_structured_batched(
                 top_indices = list(range(len(cand_lps)))
 
             h = torch.cat([cand_h[i] for i in top_indices], dim=0)
+            gru_input = torch.cat([cand_fb[i] for i in top_indices], dim=0)
             seqs = [cand_seqs[i] for i in top_indices]
             lps = torch.tensor([cand_lps[i] for i in top_indices], device=device)
 
@@ -198,15 +209,14 @@ def _beam_pointer_batched(
     h_init = torch.relu(dec.init_proj(torch.cat([h_o, h_d], dim=-1)))  # (B, d)
 
     h = h_init  # (B, d)
+    gru_input = dec.start_input.expand(B, -1)  # (B, d)
     cum_lps = torch.zeros(B, 1, device=device)  # (B, 1)
     token_seqs = torch.zeros(B, 1, max_len, dtype=torch.long, device=device)
-    # Track current station: (B, n_beams)
     current = origins.unsqueeze(1)  # (B, 1)
     n_beams = 1
 
     for step in range(max_len):
-        # h: (B * n_beams, d)
-        h_next = dec.gru(h, h)
+        h_next = dec.gru(gru_input, h)
         q = dec.query_proj(h_next)  # (B * n_beams, d)
         logits = torch.matmul(q, keys.t())  # (B * n_beams, N)
 
@@ -236,10 +246,11 @@ def _beam_pointer_batched(
         d_model = h_next.size(-1)
         h_selected = h_next.gather(1, beam_idx.unsqueeze(-1).expand(-1, -1, d_model))
 
-        # Feedback
+        # Feedback becomes next step's GRU input (separate from hidden state)
         tok_flat = tok_idx.reshape(-1)
         fb = dec.station_emb(tok_flat).view(B, actual_k, -1)
-        h = (h_selected + fb).view(B * actual_k, -1)
+        h = h_selected.view(B * actual_k, -1)
+        gru_input = fb.view(B * actual_k, -1)
 
         # Update sequences
         if step == 0 and n_beams == 1:
@@ -251,7 +262,6 @@ def _beam_pointer_batched(
         new_seqs[:, :, step] = tok_idx
         token_seqs = new_seqs
 
-        # Update current station per beam
         current = tok_idx  # (B, K)
 
         cum_lps = top_scores

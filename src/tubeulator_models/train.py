@@ -15,7 +15,7 @@ from .evaluate import RouteMetrics, compute_metrics
 from .graph_enriched import build_enriched_graph
 from .metrics_log import MetricsLogger
 from .models.combined import RouteModel
-from .topology import build_adj_mask, extract
+from .topology import build_adj_mask, build_line_station_mask, extract
 
 
 __all__ = ["train"]
@@ -240,6 +240,12 @@ def train(cfg: TrainConfig) -> None:
         rprint(
             f"  adjacency mask: {adj.sum().item():,} edges, {n_avg:.1f} avg neighbors"
         )
+
+    if cfg.model_type == "change":
+        ls_mask = build_line_station_mask(topo, ds.stations, ds.lines).to(device)
+        model.decoder.set_line_station_mask(ls_mask)
+        avg_st = ls_mask.float().sum(1).mean().item()
+        rprint(f"  line→station mask: {avg_st:.1f} avg stations per line")
 
     raw_model = model
     model = _try_compile(model)
