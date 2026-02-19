@@ -6,11 +6,10 @@ import argparse
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, random_split
 
 from .beam import beam_decode
 from .config import TrainConfig
-from .dataset import PAD, RouteDataset, collate_routes
+from .dataset import PAD, GPURouteDataset
 from .defaults import MODEL_TYPES
 from .evaluate import RouteMetrics, compute_metrics
 from .graph_enriched import build_enriched_graph
@@ -28,22 +27,27 @@ def _compute_loss(
     model_type: str,
     label_smoothing: float = 0.0,
 ) -> torch.Tensor:
+    """Vectorised loss — one CE call per head, not one per step×head."""
     ce = nn.CrossEntropyLoss(ignore_index=PAD, label_smoothing=label_smoothing)
-    stride = {"line": 2, "change": 3, "station": 1}
 
     if model_type in ("line", "change"):
         keys = ["line", "dir"] if model_type == "line" else ["line", "dir", "station"]
-        s = stride[model_type]
+        s = len(keys)  # stride: 2 for line, 3 for change
         max_legs = logits["line"].size(1)
+
+        # Pad labels to at least max_legs * stride columns
+        needed = max_legs * s
+        if labels.size(1) < needed:
+            pad = labels.new_full((labels.size(0), needed - labels.size(1)), PAD)
+            labels = torch.cat([labels, pad], dim=1)
+
         loss = torch.tensor(0.0, device=labels.device)
-        count = 0
-        for step in range(max_legs):
-            for offset, key in enumerate(keys):
-                col = step * s + offset
-                if col < labels.size(1):
-                    loss = loss + ce(logits[key][:, step], labels[:, col])
-                    count += 1
-        return loss / max(count, 1)
+        for offset, key in enumerate(keys):
+            # Extract every s-th column starting at offset → (B, max_legs)
+            tgt = labels[:, offset::s][:, :max_legs].reshape(-1)
+            pred = logits[key].reshape(-1, logits[key].size(-1))
+            loss = loss + ce(pred, tgt)
+        return loss / len(keys)
 
     elif model_type == "station":
         logits_flat = logits["station"]
@@ -69,31 +73,25 @@ def _greedy_as_beam(
     model_type: str,
     device: torch.device,
 ) -> list[list[tuple[torch.Tensor, float]]]:
-    """Wrap greedy argmax predictions as single-beam results."""
+    """Wrap greedy argmax predictions as single-beam results — vectorized."""
     if model_type in ("line", "change"):
+        # (B, max_legs)
         line_preds = logits["line"].argmax(-1)
         dir_preds = logits["dir"].argmax(-1)
-        st_preds = (
-            logits.get("station", logits["line"]).argmax(-1)
-            if model_type == "change"
-            else None
-        )
+        B, max_legs = line_preds.shape
 
-        B = line_preds.size(0)
-        results = []
-        for b in range(B):
-            flat = []
-            for step in range(line_preds.size(1)):
-                flat.append(line_preds[b, step].item())
-                flat.append(dir_preds[b, step].item())
-                if model_type == "change":
-                    flat.append(st_preds[b, step].item())
-            seq = torch.tensor(flat, dtype=torch.long, device=device)
-            results.append([(seq, 0.0)])
-        return results
+        if model_type == "change":
+            st_preds = logits["station"].argmax(-1)  # (B, max_legs)
+            # Interleave: (B, max_legs, 3) → (B, max_legs*3)
+            stacked = torch.stack([line_preds, dir_preds, st_preds], dim=-1)
+        else:
+            stacked = torch.stack([line_preds, dir_preds], dim=-1)
+
+        flat = stacked.reshape(B, -1)  # (B, max_legs*stride)
+        return [[(flat[b], 0.0)] for b in range(B)]
 
     elif model_type == "station":
-        preds = logits["station"].argmax(-1)
+        preds = logits["station"].argmax(-1)  # (B, max_len)
         return [[(preds[b], 0.0)] for b in range(preds.size(0))]
 
     raise ValueError(model_type)
@@ -126,7 +124,6 @@ def _aggregate_metrics(all_metrics: list[RouteMetrics]) -> RouteMetrics:
 
 
 def _try_compile(model: nn.Module) -> nn.Module:
-    """Attempt torch.compile with reduce-overhead; fall back to eager."""
     try:
         compiled = torch.compile(model, mode="reduce-overhead")
         print("  torch.compile(mode='reduce-overhead') enabled")
@@ -145,11 +142,10 @@ def train(cfg: TrainConfig) -> None:
         TimeRemainingColumn,
     )
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    use_amp = device == "cuda"
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    use_amp = device.type == "cuda"
     torch.manual_seed(cfg.seed)
 
-    # Allow TF32 on Ampere+ for free throughput
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
 
@@ -174,32 +170,22 @@ def train(cfg: TrainConfig) -> None:
 
     graph = build_enriched_graph(topo).to(device)
 
-    ds = RouteDataset(cfg.routes_path, model=cfg.model_type)
-    n_val = max(1, int(cfg.val_split * len(ds)))
-    n_train = len(ds) - n_val
-    train_ds, val_ds = random_split(
-        ds,
-        [n_train, n_val],
-        generator=torch.Generator().manual_seed(cfg.seed),
+    ds = GPURouteDataset(cfg.routes_path, model=cfg.model_type, device=device)
+    n_total = ds.n
+    n_val = max(1, int(cfg.val_split * n_total))
+    n_train = n_total - n_val
+
+    split_gen = torch.Generator(device=device).manual_seed(cfg.seed)
+    perm = torch.randperm(n_total, device=device, generator=split_gen)
+    train_idx = perm[:n_train]
+    val_idx = perm[n_train:]
+
+    effective_bs = min(cfg.batch_size, n_train)
+    n_train_batches = (n_train + effective_bs - 1) // effective_bs
+    rprint(
+        f"  {n_train:,} train, {n_val:,} val examples (GPU-resident)"
+        f"\n  batch_size={effective_bs:,} → {n_train_batches} batches/epoch"
     )
-    train_dl = DataLoader(
-        train_ds,
-        batch_size=cfg.batch_size,
-        shuffle=True,
-        collate_fn=collate_routes,
-        num_workers=cfg.num_workers,
-        pin_memory=cfg.pin_memory,
-        persistent_workers=cfg.num_workers > 0,
-    )
-    val_dl = DataLoader(
-        val_ds,
-        batch_size=cfg.batch_size,
-        collate_fn=collate_routes,
-        num_workers=cfg.num_workers,
-        pin_memory=cfg.pin_memory,
-        persistent_workers=cfg.num_workers > 0,
-    )
-    rprint(f"  {n_train:,} train, {n_val:,} val examples")
 
     model = RouteModel(
         n_stations=ds.n_stations,
@@ -217,7 +203,6 @@ def train(cfg: TrainConfig) -> None:
         f"  Model [bold cyan]{cfg.model_type}[/]: {n_params:,} params | {cfg.hp_tag}"
     )
 
-    # Keep a reference to the unwrapped model for state_dict / beam decode
     raw_model = model
     model = _try_compile(model)
 
@@ -227,7 +212,7 @@ def train(cfg: TrainConfig) -> None:
         weight_decay=cfg.weight_decay,
     )
 
-    total_steps = len(train_dl) * cfg.epochs
+    total_steps = n_train_batches * cfg.epochs
     warmup_steps = int(cfg.warmup_ratio * total_steps)
 
     scheduler = torch.optim.lr_scheduler.SequentialLR(
@@ -236,11 +221,11 @@ def train(cfg: TrainConfig) -> None:
             torch.optim.lr_scheduler.LinearLR(
                 optimizer,
                 start_factor=0.01,
-                total_iters=warmup_steps,
+                total_iters=max(warmup_steps, 1),
             ),
             torch.optim.lr_scheduler.CosineAnnealingLR(
                 optimizer,
-                T_max=total_steps - warmup_steps,
+                T_max=max(total_steps - warmup_steps, 1),
             ),
         ],
         milestones=[warmup_steps],
@@ -252,6 +237,8 @@ def train(cfg: TrainConfig) -> None:
     best_metrics: RouteMetrics | None = None
     cfg.checkpoint_dir.mkdir(exist_ok=True)
     logger = MetricsLogger(cfg.model_type, cfg.hp_tag, cfg.checkpoint_dir.parent)
+
+    train_gen = torch.Generator(device=device).manual_seed(cfg.seed)
 
     with Progress(
         BarColumn(),
@@ -282,13 +269,17 @@ def train(cfg: TrainConfig) -> None:
         )
 
         for epoch in range(1, cfg.epochs + 1):
+            ds.resample_labels()
+            shuffle = torch.randperm(n_train, device=device, generator=train_gen)
+            shuffled_train = train_idx[shuffle]
+
             # ── train ─────────────────────────────────────────
             model.train()
-            total_loss = 0.0
-            for _indices, origins, dests, labels in train_dl:
-                origins = origins.to(device, non_blocking=True)
-                dests = dests.to(device, non_blocking=True)
-                labels = labels.to(device, non_blocking=True)
+            epoch_loss = torch.zeros(1, device=device)
+
+            for batch_start in range(0, n_train, cfg.batch_size):
+                batch_idx = shuffled_train[batch_start : batch_start + cfg.batch_size]
+                _, origins, dests, labels = ds.get_batch(batch_idx)
 
                 with torch.amp.autocast("cuda", enabled=use_amp):
                     logits = model(
@@ -314,13 +305,13 @@ def train(cfg: TrainConfig) -> None:
                 scaler.step(optimizer)
                 scaler.update()
                 scheduler.step()
-                total_loss += loss.item() * origins.size(0)
+                epoch_loss += loss.detach() * origins.size(0)
 
-            avg_train = total_loss / n_train
+            avg_train = epoch_loss.item() / n_train
 
             # ── validate ──────────────────────────────────────
             model.eval()
-            val_loss = 0.0
+            epoch_val_loss = torch.zeros(1, device=device)
             batch_metrics: list[RouteMetrics] = []
 
             run_beam = (
@@ -328,10 +319,9 @@ def train(cfg: TrainConfig) -> None:
             ) or epoch == cfg.epochs
 
             with torch.no_grad():
-                for indices, origins, dests, labels in val_dl:
-                    origins = origins.to(device, non_blocking=True)
-                    dests = dests.to(device, non_blocking=True)
-                    labels = labels.to(device, non_blocking=True)
+                for batch_start in range(0, n_val, cfg.batch_size):
+                    batch_idx = val_idx[batch_start : batch_start + cfg.batch_size]
+                    raw_indices, origins, dests, labels = ds.get_batch(batch_idx)
 
                     with torch.amp.autocast("cuda", enabled=use_amp):
                         logits = model(
@@ -348,16 +338,12 @@ def train(cfg: TrainConfig) -> None:
                             cfg.model_type,
                             label_smoothing=0.0,
                         )
-                    val_loss += vl.item() * origins.size(0)
+                    epoch_val_loss += vl.detach() * origins.size(0)
 
-                    all_valid = [
-                        [lbl.to(device) for lbl in ds.get_all_labels(i)]
-                        for i in indices
-                    ]
+                    # ONE bulk transfer instead of per-element .item()
+                    all_valid = ds.get_all_labels_batch(raw_indices)
 
                     if run_beam:
-                        # Beam decode uses the unwrapped model
-                        # (torch.compile + no_grad + eval can have issues)
                         beam_results = beam_decode(
                             raw_model,
                             graph.x,
@@ -368,7 +354,6 @@ def train(cfg: TrainConfig) -> None:
                             beam_width=cfg.beam_width,
                         )
                     else:
-                        # Greedy: top-1 from argmax, wrapped as fake beam
                         beam_results = _greedy_as_beam(
                             logits,
                             cfg.model_type,
@@ -384,7 +369,8 @@ def train(cfg: TrainConfig) -> None:
                             all_valid_labels=all_valid,
                         )
                     )
-            avg_val = val_loss / n_val
+
+            avg_val = epoch_val_loss.item() / n_val
             epoch_metrics = _aggregate_metrics(batch_metrics)
 
             lr_now = optimizer.param_groups[0]["lr"]

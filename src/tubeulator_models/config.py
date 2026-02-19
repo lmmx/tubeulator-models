@@ -38,8 +38,6 @@ class TrainConfig(BaseModel):
     val_split: float
     seed: int
     log_every: int
-    num_workers: int
-    pin_memory: bool
     warmup_ratio: float
     label_smoothing: float
     scheduled_sampling: float
