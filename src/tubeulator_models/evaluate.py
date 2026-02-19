@@ -8,6 +8,7 @@ import torch
 
 from .dataset import PAD
 
+
 __all__ = ["RouteMetrics", "compute_metrics"]
 
 
@@ -156,9 +157,7 @@ def compute_metrics(
 
         # Beam match: does ANY beam match any valid route?
         beam_match = any(
-            _sequences_match(pred, lbl)
-            for pred, _lp in beams
-            for lbl in routes
+            _sequences_match(pred, lbl) for pred, _lp in beams for lbl in routes
         )
         if beam_match:
             beam_correct += 1

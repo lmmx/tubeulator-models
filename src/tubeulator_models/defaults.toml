@@ -9,9 +9,6 @@ n_enc_layers = 3
 dropout = 0.1
 
 # ── Training ──────────────────────────────────────────────────
-epochs = 100
-batch_size = 256
-lr = 3e-4
 weight_decay = 1e-4
 grad_clip = 1.0
 val_split = 0.1
@@ -60,9 +57,6 @@ max_seq = 4
 [model.change]
 max_seq = 4
 
-[model.station]
-max_seq = 40
-
 # ── Profiles ─────────────────────────────────────────────────
 [profiles.dev]
 epochs = 20
@@ -71,10 +65,12 @@ lr = 5e-4
 
 [profiles.dev.model.station]
 batch_size = 128
+max_seq = 40
 
 [profiles.full]
 epochs = 200
-lr = 1e-4
+batch_size = 2048
+lr = 8e-4           # linear scaling: 8× batch (256→2048) = 8× lr (1e-4→8e-4)
 d_model = 256
 n_heads = 8
 n_enc_layers = 4
@@ -83,4 +79,5 @@ weight_decay = 5e-5
 
 [profiles.full.model.station]
 max_seq = 50
-batch_size = 128
+batch_size = 512
+lr = 4e-4            # linear scaling: 4× batch (128→512) = 4× lr (1e-4→4e-4)

@@ -10,6 +10,7 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 
+
 __all__ = ["RouteDataset", "collate_routes"]
 
 PAD = -1
@@ -21,6 +22,8 @@ class RouteDataset(Dataset):
 
     When multiple routes exist for an OD pair, __getitem__ samples
     one uniformly at random each time it's called.
+
+    All label tensors are pre-computed at init to avoid per-call Python overhead.
     """
 
     def __init__(self, data_path: Path, model: str = "change"):
@@ -28,8 +31,22 @@ class RouteDataset(Dataset):
             blob = json.load(f)
         self.stations: list[str] = blob["stations"]
         self.lines: list[str] = blob["lines"]
-        self.examples: list[dict] = blob["examples"]
         self.model = model
+
+        # Pre-compute everything into tensors at init time
+        raw_examples = blob["examples"]
+        self._origins = torch.zeros(len(raw_examples), dtype=torch.long)
+        self._dests = torch.zeros(len(raw_examples), dtype=torch.long)
+        # Each element: list of pre-built label tensors (one per valid route)
+        self._all_labels: list[list[torch.Tensor]] = []
+
+        for i, ex in enumerate(raw_examples):
+            self._origins[i] = ex["origin"]
+            self._dests[i] = ex["destination"]
+
+            routes = ex.get("routes", [ex])
+            labels = [self._make_label(r) for r in routes]
+            self._all_labels.append(labels)
 
     @property
     def n_stations(self) -> int:
@@ -40,7 +57,7 @@ class RouteDataset(Dataset):
         return len(self.lines)
 
     def __len__(self) -> int:
-        return len(self.examples)
+        return len(self._origins)
 
     def _make_label(self, route: dict) -> torch.Tensor:
         """Build a label tensor from a single route dict."""
@@ -59,25 +76,13 @@ class RouteDataset(Dataset):
         else:
             raise ValueError(f"Unknown model: {self.model!r}")
 
-    def _pick_route(self, ex: dict) -> dict:
-        """Pick a route from available options. Handles both old and new format."""
-        if "routes" in ex:
-            return random.choice(ex["routes"])
-        return ex
-
     def get_all_labels(self, idx: int) -> list[torch.Tensor]:
         """Return label tensors for ALL valid routes at this OD pair."""
-        ex = self.examples[idx]
-        if "routes" in ex:
-            return [self._make_label(r) for r in ex["routes"]]
-        return [self._make_label(ex)]
+        return self._all_labels[idx]
 
     def __getitem__(self, idx: int):
-        ex = self.examples[idx]
-        origin = ex["origin"]
-        dest = ex["destination"]
-        label = self._make_label(self._pick_route(ex))
-        return idx, origin, dest, label
+        label = random.choice(self._all_labels[idx])
+        return idx, self._origins[idx].item(), self._dests[idx].item(), label
 
 
 def collate_routes(batch):

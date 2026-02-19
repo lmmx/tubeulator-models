@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, random_split
 from .beam import beam_decode
 from .config import TrainConfig
 from .dataset import PAD, RouteDataset, collate_routes
-from .defaults import MODEL_TYPES, default_model_type
+from .defaults import MODEL_TYPES
 from .evaluate import RouteMetrics, compute_metrics
 from .graph_enriched import build_enriched_graph
 from .metrics_log import MetricsLogger
@@ -71,7 +71,7 @@ def _greedy_as_beam(
 ) -> list[list[tuple[torch.Tensor, float]]]:
     """Wrap greedy argmax predictions as single-beam results."""
     if model_type in ("line", "change"):
-        line_preds = logits["line"].argmax(-1)  # (B, max_legs)
+        line_preds = logits["line"].argmax(-1)
         dir_preds = logits["dir"].argmax(-1)
         st_preds = (
             logits.get("station", logits["line"]).argmax(-1)
@@ -93,7 +93,7 @@ def _greedy_as_beam(
         return results
 
     elif model_type == "station":
-        preds = logits["station"].argmax(-1)  # (B, max_len)
+        preds = logits["station"].argmax(-1)
         return [[(preds[b], 0.0)] for b in range(preds.size(0))]
 
     raise ValueError(model_type)
@@ -125,6 +125,17 @@ def _aggregate_metrics(all_metrics: list[RouteMetrics]) -> RouteMetrics:
     )
 
 
+def _try_compile(model: nn.Module) -> nn.Module:
+    """Attempt torch.compile with reduce-overhead; fall back to eager."""
+    try:
+        compiled = torch.compile(model, mode="reduce-overhead")
+        print("  torch.compile(mode='reduce-overhead') enabled")
+        return compiled
+    except Exception as e:
+        print(f"  torch.compile unavailable ({e}), using eager mode")
+        return model
+
+
 def train(cfg: TrainConfig) -> None:
     from rich import print as rprint
     from rich.progress import (
@@ -135,7 +146,12 @@ def train(cfg: TrainConfig) -> None:
     )
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    use_amp = device == "cuda"
     torch.manual_seed(cfg.seed)
+
+    # Allow TF32 on Ampere+ for free throughput
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
     rprint("[bold]Extracting topology...")
     topo = extract(cfg.gtfs_path)
@@ -201,6 +217,10 @@ def train(cfg: TrainConfig) -> None:
         f"  Model [bold cyan]{cfg.model_type}[/]: {n_params:,} params | {cfg.hp_tag}"
     )
 
+    # Keep a reference to the unwrapped model for state_dict / beam decode
+    raw_model = model
+    model = _try_compile(model)
+
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=cfg.lr,
@@ -225,6 +245,8 @@ def train(cfg: TrainConfig) -> None:
         ],
         milestones=[warmup_steps],
     )
+
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 
     best_val = float("inf")
     best_metrics: RouteMetrics | None = None
@@ -260,34 +282,37 @@ def train(cfg: TrainConfig) -> None:
         )
 
         for epoch in range(1, cfg.epochs + 1):
-            # ── train (unchanged) ─────────────────────────────
+            # ── train ─────────────────────────────────────────
             model.train()
             total_loss = 0.0
             for _indices, origins, dests, labels in train_dl:
-                origins = origins.to(device)
-                dests = dests.to(device)
-                labels = labels.to(device)
+                origins = origins.to(device, non_blocking=True)
+                dests = dests.to(device, non_blocking=True)
+                labels = labels.to(device, non_blocking=True)
 
-                logits = model(
-                    graph.x,
-                    graph.edge_index,
-                    graph.edge_attr,
-                    origins,
-                    dests,
-                    labels=labels,
-                    sampling_p=cfg.scheduled_sampling,
-                )
-                loss = _compute_loss(
-                    logits,
-                    labels,
-                    cfg.model_type,
-                    label_smoothing=cfg.label_smoothing,
-                )
+                with torch.amp.autocast("cuda", enabled=use_amp):
+                    logits = model(
+                        graph.x,
+                        graph.edge_index,
+                        graph.edge_attr,
+                        origins,
+                        dests,
+                        labels=labels,
+                        sampling_p=cfg.scheduled_sampling,
+                    )
+                    loss = _compute_loss(
+                        logits,
+                        labels,
+                        cfg.model_type,
+                        label_smoothing=cfg.label_smoothing,
+                    )
 
-                optimizer.zero_grad()
-                loss.backward()
+                optimizer.zero_grad(set_to_none=True)
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
                 nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
-                optimizer.step()
+                scaler.step(optimizer)
+                scaler.update()
                 scheduler.step()
                 total_loss += loss.item() * origins.size(0)
 
@@ -300,28 +325,29 @@ def train(cfg: TrainConfig) -> None:
 
             run_beam = (
                 cfg.beam_eval_interval > 0 and epoch % cfg.beam_eval_interval == 0
-            ) or epoch == cfg.epochs  # always on final epoch
+            ) or epoch == cfg.epochs
 
             with torch.no_grad():
                 for indices, origins, dests, labels in val_dl:
-                    origins = origins.to(device)
-                    dests = dests.to(device)
-                    labels = labels.to(device)
+                    origins = origins.to(device, non_blocking=True)
+                    dests = dests.to(device, non_blocking=True)
+                    labels = labels.to(device, non_blocking=True)
 
-                    logits = model(
-                        graph.x,
-                        graph.edge_index,
-                        graph.edge_attr,
-                        origins,
-                        dests,
-                        labels=labels,
-                    )
-                    vl = _compute_loss(
-                        logits,
-                        labels,
-                        cfg.model_type,
-                        label_smoothing=0.0,
-                    )
+                    with torch.amp.autocast("cuda", enabled=use_amp):
+                        logits = model(
+                            graph.x,
+                            graph.edge_index,
+                            graph.edge_attr,
+                            origins,
+                            dests,
+                            labels=labels,
+                        )
+                        vl = _compute_loss(
+                            logits,
+                            labels,
+                            cfg.model_type,
+                            label_smoothing=0.0,
+                        )
                     val_loss += vl.item() * origins.size(0)
 
                     all_valid = [
@@ -330,8 +356,10 @@ def train(cfg: TrainConfig) -> None:
                     ]
 
                     if run_beam:
+                        # Beam decode uses the unwrapped model
+                        # (torch.compile + no_grad + eval can have issues)
                         beam_results = beam_decode(
-                            model,
+                            raw_model,
                             graph.x,
                             graph.edge_index,
                             graph.edge_attr,
@@ -367,7 +395,7 @@ def train(cfg: TrainConfig) -> None:
                 best_metrics = epoch_metrics
                 star = "[bold green]★[/]"
                 ckpt = cfg.checkpoint_dir / f"model_{cfg.model_type}_best.pt"
-                torch.save(model.state_dict(), ckpt)
+                torch.save(raw_model.state_dict(), ckpt)
 
             beam_str = (
                 f"[bold yellow]{epoch_metrics.any_in_beam:.1%}"
