@@ -44,8 +44,14 @@ class LineSeqDecoder(nn.Module):
         labels: (B, max_steps*2) flattened [line, dir, line, dir, ...] or None for inference.
         Returns dict of logits tensors.
         """
-        # B = h_origin.size(0)
+        device = h_origin.device
         h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
+
+        # Generate mask directly on device — no CPU→GPU copy inside compiled region
+        if self.training and sampling_p > 0.0:
+            use_own = torch.rand(self.max_legs, device=device) < sampling_p
+        else:
+            use_own = torch.zeros(self.max_legs, dtype=torch.bool, device=device)
 
         all_line_logits = []
         all_dir_logits = []
@@ -53,18 +59,23 @@ class LineSeqDecoder(nn.Module):
 
         for step in range(self.max_legs):
             h = self.gru(h, h)
-            all_line_logits.append(self.line_head(h))
-            all_dir_logits.append(self.dir_head(h))
+            line_logits = self.line_head(h)
+            dir_logits = self.dir_head(h)
+            all_line_logits.append(line_logits)
+            all_dir_logits.append(dir_logits)
             all_stop_logits.append(self.stop_token(h))
 
-            use_own = self.training and torch.rand(1).item() < sampling_p
+            own_ln = line_logits.argmax(-1)
+            own_dir = dir_logits.argmax(-1)
 
-            if labels is not None and step * 2 + 1 < labels.size(1) and not use_own:
-                ln_tok = labels[:, step * 2].clamp(min=0)
-                dir_tok = labels[:, step * 2 + 1].clamp(min=0)
+            if labels is not None and step * 2 + 1 < labels.size(1):
+                teacher_ln = labels[:, step * 2].clamp(min=0)
+                teacher_dir = labels[:, step * 2 + 1].clamp(min=0)
+                ln_tok = torch.where(use_own[step], own_ln, teacher_ln)
+                dir_tok = torch.where(use_own[step], own_dir, teacher_dir)
             else:
-                ln_tok = all_line_logits[-1].argmax(-1)
-                dir_tok = all_dir_logits[-1].argmax(-1)
+                ln_tok = own_ln
+                dir_tok = own_dir
 
             feedback = torch.cat(
                 [
@@ -107,27 +118,40 @@ class InterchangeDecoder(nn.Module):
         self.fb_proj = nn.Linear(d_model, d_model)
 
     def forward(self, h_origin, h_dest, labels=None, sampling_p: float = 0.0):
-        # B = h_origin.size(0)
+        device = h_origin.device
         h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
+
+        if self.training and sampling_p > 0.0:
+            use_own = torch.rand(self.max_legs, device=device) < sampling_p
+        else:
+            use_own = torch.zeros(self.max_legs, dtype=torch.bool, device=device)
 
         all_ln, all_dir, all_st = [], [], []
 
         for step in range(self.max_legs):
             h = self.gru(h, h)
-            all_ln.append(self.line_head(h))
-            all_dir.append(self.dir_head(h))
-            all_st.append(self.station_head(h))
+            ln_logits = self.line_head(h)
+            dir_logits = self.dir_head(h)
+            st_logits = self.station_head(h)
+            all_ln.append(ln_logits)
+            all_dir.append(dir_logits)
+            all_st.append(st_logits)
 
-            use_own = self.training and torch.rand(1).item() < sampling_p
+            own_ln = ln_logits.argmax(-1)
+            own_dir = dir_logits.argmax(-1)
+            own_st = st_logits.argmax(-1)
 
-            if labels is not None and step * 3 + 2 < labels.size(1) and not use_own:
-                ln_tok = labels[:, step * 3].clamp(min=0)
-                dir_tok = labels[:, step * 3 + 1].clamp(min=0)
-                st_tok = labels[:, step * 3 + 2].clamp(min=0)
+            if labels is not None and step * 3 + 2 < labels.size(1):
+                teacher_ln = labels[:, step * 3].clamp(min=0)
+                teacher_dir = labels[:, step * 3 + 1].clamp(min=0)
+                teacher_st = labels[:, step * 3 + 2].clamp(min=0)
+                ln_tok = torch.where(use_own[step], own_ln, teacher_ln)
+                dir_tok = torch.where(use_own[step], own_dir, teacher_dir)
+                st_tok = torch.where(use_own[step], own_st, teacher_st)
             else:
-                ln_tok = all_ln[-1].argmax(-1)
-                dir_tok = all_dir[-1].argmax(-1)
-                st_tok = all_st[-1].argmax(-1)
+                ln_tok = own_ln
+                dir_tok = own_dir
+                st_tok = own_st
 
             fb = torch.cat(
                 [
@@ -170,25 +194,30 @@ class StationSeqDecoder(nn.Module):
         H_all: (N, d_model) — all node embeddings from encoder (shared across batch).
         We compute pointer logits over these.
         """
-        # B = h_origin.size(0)
+        device = h_origin.device
         h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
 
         keys = self.key_proj(H_all)  # (N, d)
+
+        if self.training and sampling_p > 0.0:
+            use_own = torch.rand(self.max_len, device=device) < sampling_p
+        else:
+            use_own = torch.zeros(self.max_len, dtype=torch.bool, device=device)
 
         all_logits = []
         for step in range(self.max_len):
             h = self.gru(h, h)
             q = self.query_proj(h)  # (B, d)
-            # pointer scores
             logits = torch.matmul(q, keys.t())  # (B, N)
             all_logits.append(logits)
 
-            use_own = self.training and torch.rand(1).item() < sampling_p
+            own_tok = logits.argmax(-1)
 
-            if labels is not None and step < labels.size(1) and not use_own:
-                tok = labels[:, step].clamp(min=0)
+            if labels is not None and step < labels.size(1):
+                teacher_tok = labels[:, step].clamp(min=0)
+                tok = torch.where(use_own[step], own_tok, teacher_tok)
             else:
-                tok = logits.argmax(-1)
+                tok = own_tok
 
             h = h + self.station_emb(tok)
 

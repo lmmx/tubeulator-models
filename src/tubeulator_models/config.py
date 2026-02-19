@@ -38,15 +38,18 @@ class TrainConfig(BaseModel):
     val_split: float
     seed: int
     log_every: int
-    num_workers: int
-    pin_memory: bool
     warmup_ratio: float
     label_smoothing: float
     scheduled_sampling: float
 
+    # ── inference ─────────────────────────────────────────────
+    beam_width: int
+    beam_eval_interval: int
+
     # ── route enumeration ─────────────────────────────────────
     max_transfers: int
     max_routes_per_od: int
+    transfer_penalty: float
 
     @computed_field
     @property
@@ -65,6 +68,10 @@ class TrainConfig(BaseModel):
             parts.append(f"L={self.n_enc_layers}")
         if self.max_seq != defaults.get("max_seq"):
             parts.append(f"seq={self.max_seq}")
+        if self.label_smoothing > 0:
+            parts.append(f"ls={self.label_smoothing}")
+        if self.scheduled_sampling > 0:
+            parts.append(f"ss={self.scheduled_sampling}")
         return "_".join(parts)
 
     # ── derived paths ─────────────────────────────────────────

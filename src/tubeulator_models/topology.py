@@ -1,4 +1,4 @@
-"""Extract line-aware topology from GTFS."""
+"""Extract line-aware topology with travel times from GTFS."""
 
 from __future__ import annotations
 
@@ -8,9 +8,16 @@ import zipfile
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from statistics import median
 
 
 __all__ = ["Topology", "extract"]
+
+
+def _parse_gtfs_time(s: str) -> int:
+    """Parse HH:MM:SS to seconds since midnight. GTFS allows H > 23."""
+    parts = s.strip().split(":")
+    return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
 
 
 @dataclass
@@ -23,9 +30,15 @@ class Topology:
     stop_names: dict[str, str]
     # line → longest observed trip sequence (canonical order)
     line_order: dict[str, list[str]]
+    # line -> (from_stop, to_stop) -> median travel time in seconds
+    edge_time: dict[str, dict[tuple[str, str], float]]
 
     def neighbors(self, station: str, line: str) -> set[str]:
         return self.line_adj.get(line, {}).get(station, set())
+
+    def travel_time(self, line: str, from_st: str, to_st: str) -> float:
+        """Seconds between adjacent stations on a line. Falls back to 120s."""
+        return self.edge_time.get(line, {}).get((from_st, to_st), 120.0)
 
     def direction_of(self, line: str, from_st: str, to_st: str) -> int:
         """0 = toward higher canonical index, 1 = toward lower."""
@@ -64,33 +77,59 @@ def extract(gtfs_path: Path) -> Topology:
             for row in csv.DictReader(io.TextIOWrapper(f)):
                 trip_line[row["trip_id"]] = row["route_id"]
 
-        trip_stops: dict[str, list[tuple[int, str]]] = defaultdict(list)
+        # Now also parse arrival_time
+        trip_stops: dict[str, list[tuple[int, str, str]]] = defaultdict(list)
         with zf.open("stop_times.txt") as f:
             for row in csv.DictReader(io.TextIOWrapper(f)):
                 trip_stops[row["trip_id"]].append(
-                    (int(row["stop_sequence"]), row["stop_id"])
+                    (
+                        int(row["stop_sequence"]),
+                        row["stop_id"],
+                        row["arrival_time"],
+                    )
                 )
 
     line_adj: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     station_lines: dict[str, set[str]] = defaultdict(set)
     line_seqs: dict[str, list[list[str]]] = defaultdict(list)
 
+    # Collect raw travel times: line -> (from, to) -> [seconds, ...]
+    raw_times: dict[str, dict[tuple[str, str], list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+
     for trip_id, stops in trip_stops.items():
         line = trip_line.get(trip_id)
         if not line:
             continue
-        ordered = [s for _, s in sorted(stops)]
+        ordered = sorted(stops)  # sort by stop_sequence
         if len(ordered) < 2:
             continue
-        line_seqs[line].append(ordered)
-        for a, b in zip(ordered, ordered[1:]):
-            line_adj[line][a].add(b)
-            line_adj[line][b].add(a)
-            station_lines[a].add(line)
-            station_lines[b].add(line)
+
+        station_seq = [stop_id for _, stop_id, _ in ordered]
+        line_seqs[line].append(station_seq)
+
+        for (_, s1, t1), (_, s2, t2) in zip(ordered, ordered[1:]):
+            line_adj[line][s1].add(s2)
+            line_adj[line][s2].add(s1)
+            station_lines[s1].add(line)
+            station_lines[s2].add(line)
+
+            dt = _parse_gtfs_time(t2) - _parse_gtfs_time(t1)
+            if 0 < dt < 3600:  # sanity: positive and under 60 minutes
+                raw_times[line][(s1, s2)].append(float(dt))
+
+    # Aggregate to median
+    edge_time: dict[str, dict[tuple[str, str], float]] = {}
+    for line, edges in raw_times.items():
+        edge_time[line] = {pair: median(times) for pair, times in edges.items()}
 
     line_order = {ln: max(seqs, key=len) for ln, seqs in line_seqs.items()}
     interchanges = {s for s, ls in station_lines.items() if len(ls) >= 2}
+
+    n_timed = sum(len(e) for e in edge_time.values())
+    n_total = sum(sum(len(nbrs) for nbrs in adj.values()) for adj in line_adj.values())
+    print(f"  travel times: {n_timed} edges timed out of {n_total} adjacencies")
 
     return Topology(
         line_adj=dict(line_adj),
@@ -98,4 +137,5 @@ def extract(gtfs_path: Path) -> Topology:
         interchanges=interchanges,
         stop_names=stop_names,
         line_order=line_order,
+        edge_time=edge_time,
     )

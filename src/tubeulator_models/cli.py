@@ -102,6 +102,7 @@ def build_routes() -> None:
         topo,
         max_transfers=cfg.max_transfers,
         max_results=cfg.max_routes_per_od,
+        transfer_penalty=cfg.transfer_penalty,
         output_path=cfg.routes_path,
     )
 

@@ -40,7 +40,7 @@ class RouteModel(nn.Module):
 
         self.encoder = GATEncoder(
             d_node=4,
-            d_edge=n_lines,
+            d_edge=n_lines + 1,  # one-hot line identity + normalised travel time
             d_model=d_model,
             n_heads=n_heads,
             n_layers=n_enc_layers,

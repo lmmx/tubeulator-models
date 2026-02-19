@@ -6,13 +6,14 @@ import argparse
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, random_split
 
+from .beam import beam_decode
 from .config import TrainConfig
-from .dataset import PAD, RouteDataset, collate_routes
+from .dataset import PAD, GPURouteDataset
 from .defaults import MODEL_TYPES
 from .evaluate import RouteMetrics, compute_metrics
 from .graph_enriched import build_enriched_graph
+from .metrics_log import MetricsLogger
 from .models.combined import RouteModel
 from .topology import extract
 
@@ -26,22 +27,27 @@ def _compute_loss(
     model_type: str,
     label_smoothing: float = 0.0,
 ) -> torch.Tensor:
+    """Vectorised loss — one CE call per head, not one per step×head."""
     ce = nn.CrossEntropyLoss(ignore_index=PAD, label_smoothing=label_smoothing)
-    stride = {"line": 2, "change": 3}
 
     if model_type in ("line", "change"):
         keys = ["line", "dir"] if model_type == "line" else ["line", "dir", "station"]
-        s = stride[model_type]
+        s = len(keys)  # stride: 2 for line, 3 for change
         max_legs = logits["line"].size(1)
+
+        # Pad labels to at least max_legs * stride columns
+        needed = max_legs * s
+        if labels.size(1) < needed:
+            pad = labels.new_full((labels.size(0), needed - labels.size(1)), PAD)
+            labels = torch.cat([labels, pad], dim=1)
+
         loss = torch.tensor(0.0, device=labels.device)
-        count = 0
-        for step in range(max_legs):
-            for offset, key in enumerate(keys):
-                col = step * s + offset
-                if col < labels.size(1):
-                    loss = loss + ce(logits[key][:, step], labels[:, col])
-                    count += 1
-        return loss / max(count, 1)
+        for offset, key in enumerate(keys):
+            # Extract every s-th column starting at offset → (B, max_legs)
+            tgt = labels[:, offset::s][:, :max_legs].reshape(-1)
+            pred = logits[key].reshape(-1, logits[key].size(-1))
+            loss = loss + ce(pred, tgt)
+        return loss / len(keys)
 
     elif model_type == "station":
         logits_flat = logits["station"]
@@ -62,12 +68,86 @@ def _compute_loss(
     raise ValueError(model_type)
 
 
+def _greedy_as_beam(
+    logits: dict,
+    model_type: str,
+    device: torch.device,
+) -> list[list[tuple[torch.Tensor, float]]]:
+    """Wrap greedy argmax predictions as single-beam results — vectorized."""
+    if model_type in ("line", "change"):
+        # (B, max_legs)
+        line_preds = logits["line"].argmax(-1)
+        dir_preds = logits["dir"].argmax(-1)
+        B, max_legs = line_preds.shape
+
+        if model_type == "change":
+            st_preds = logits["station"].argmax(-1)  # (B, max_legs)
+            # Interleave: (B, max_legs, 3) → (B, max_legs*3)
+            stacked = torch.stack([line_preds, dir_preds, st_preds], dim=-1)
+        else:
+            stacked = torch.stack([line_preds, dir_preds], dim=-1)
+
+        flat = stacked.reshape(B, -1)  # (B, max_legs*stride)
+        return [[(flat[b], 0.0)] for b in range(B)]
+
+    elif model_type == "station":
+        preds = logits["station"].argmax(-1)  # (B, max_len)
+        return [[(preds[b], 0.0)] for b in range(preds.size(0))]
+
+    raise ValueError(model_type)
+
+
+def _aggregate_metrics(all_metrics: list[RouteMetrics]) -> RouteMetrics:
+    total_n = sum(m.n_examples for m in all_metrics)
+    if total_n == 0:
+        return all_metrics[0]
+
+    def _wavg(attr: str) -> float | None:
+        vals = [
+            (getattr(m, attr), m.n_examples)
+            for m in all_metrics
+            if getattr(m, attr) is not None
+        ]
+        if not vals:
+            return None
+        return sum(v * n for v, n in vals) / sum(n for _, n in vals)
+
+    return RouteMetrics(
+        exact_match=_wavg("exact_match"),
+        any_in_beam=_wavg("any_in_beam"),
+        line_acc=_wavg("line_acc"),
+        dir_acc=_wavg("dir_acc"),
+        station_acc=_wavg("station_acc"),
+        topologically_valid=_wavg("topologically_valid"),
+        n_examples=total_n,
+    )
+
+
+def _try_compile(model: nn.Module) -> nn.Module:
+    try:
+        compiled = torch.compile(model, mode="reduce-overhead")
+        print("  torch.compile(mode='reduce-overhead') enabled")
+        return compiled
+    except Exception as e:
+        print(f"  torch.compile unavailable ({e}), using eager mode")
+        return model
+
+
 def train(cfg: TrainConfig) -> None:
     from rich import print as rprint
-    from rich.progress import BarColumn, Progress, TextColumn, TimeRemainingColumn
+    from rich.progress import (
+        BarColumn,
+        Progress,
+        TextColumn,
+        TimeRemainingColumn,
+    )
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    use_amp = device.type == "cuda"
     torch.manual_seed(cfg.seed)
+
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
     rprint("[bold]Extracting topology...")
     topo = extract(cfg.gtfs_path)
@@ -84,37 +164,28 @@ def train(cfg: TrainConfig) -> None:
             topo,
             max_transfers=cfg.max_transfers,
             max_results=cfg.max_routes_per_od,
+            transfer_penalty=cfg.transfer_penalty,
             output_path=cfg.routes_path,
         )
 
     graph = build_enriched_graph(topo).to(device)
 
-    ds = RouteDataset(cfg.routes_path, model=cfg.model_type)
-    n_val = max(1, int(cfg.val_split * len(ds)))
-    n_train = len(ds) - n_val
-    train_ds, val_ds = random_split(
-        ds,
-        [n_train, n_val],
-        generator=torch.Generator().manual_seed(cfg.seed),
+    ds = GPURouteDataset(cfg.routes_path, model=cfg.model_type, device=device)
+    n_total = ds.n
+    n_val = max(1, int(cfg.val_split * n_total))
+    n_train = n_total - n_val
+
+    split_gen = torch.Generator(device=device).manual_seed(cfg.seed)
+    perm = torch.randperm(n_total, device=device, generator=split_gen)
+    train_idx = perm[:n_train]
+    val_idx = perm[n_train:]
+
+    effective_bs = min(cfg.batch_size, n_train)
+    n_train_batches = (n_train + effective_bs - 1) // effective_bs
+    rprint(
+        f"  {n_train:,} train, {n_val:,} val examples (GPU-resident)"
+        f"\n  batch_size={effective_bs:,} → {n_train_batches} batches/epoch"
     )
-    train_dl = DataLoader(
-        train_ds,
-        batch_size=cfg.batch_size,
-        shuffle=True,
-        collate_fn=collate_routes,
-        num_workers=cfg.num_workers,
-        pin_memory=cfg.pin_memory,
-        persistent_workers=cfg.num_workers > 0,
-    )
-    val_dl = DataLoader(
-        val_ds,
-        batch_size=cfg.batch_size,
-        collate_fn=collate_routes,
-        num_workers=cfg.num_workers,
-        pin_memory=cfg.pin_memory,
-        persistent_workers=cfg.num_workers > 0,
-    )
-    rprint(f"  {n_train:,} train, {n_val:,} val examples")
 
     model = RouteModel(
         n_stations=ds.n_stations,
@@ -132,18 +203,42 @@ def train(cfg: TrainConfig) -> None:
         f"  Model [bold cyan]{cfg.model_type}[/]: {n_params:,} params | {cfg.hp_tag}"
     )
 
+    raw_model = model
+    model = _try_compile(model)
+
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=cfg.lr,
         weight_decay=cfg.weight_decay,
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+
+    total_steps = n_train_batches * cfg.epochs
+    warmup_steps = int(cfg.warmup_ratio * total_steps)
+
+    scheduler = torch.optim.lr_scheduler.SequentialLR(
         optimizer,
-        T_max=cfg.epochs,
+        schedulers=[
+            torch.optim.lr_scheduler.LinearLR(
+                optimizer,
+                start_factor=0.01,
+                total_iters=max(warmup_steps, 1),
+            ),
+            torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer,
+                T_max=max(total_steps - warmup_steps, 1),
+            ),
+        ],
+        milestones=[warmup_steps],
     )
 
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+
     best_val = float("inf")
+    best_metrics: RouteMetrics | None = None
     cfg.checkpoint_dir.mkdir(exist_ok=True)
+    logger = MetricsLogger(cfg.model_type, cfg.hp_tag, cfg.checkpoint_dir.parent)
+
+    train_gen = torch.Generator(device=device).manual_seed(cfg.seed)
 
     with Progress(
         BarColumn(),
@@ -151,9 +246,12 @@ def train(cfg: TrainConfig) -> None:
         TimeRemainingColumn(),
         TextColumn("·"),
         TextColumn(
-            "loss [cyan]{task.fields[train_loss]:.4f}[/]/[magenta]{task.fields[val_loss]:.4f}"
+            "loss [cyan]{task.fields[train_loss]:.4f}[/]"
+            "/[magenta]{task.fields[val_loss]:.4f}"
         ),
-        TextColumn("exact [bold green]{task.fields[exact_match]:.1%}"),
+        TextColumn("top1 [bold green]{task.fields[exact_match]:.1%}"),
+        TextColumn("beam {task.fields[beam_display]}"),
+        TextColumn("valid {task.fields[valid]:.0%}"),
         TextColumn("lr [dim]{task.fields[lr]:.1e}"),
         TextColumn("{task.fields[star]}"),
         refresh_per_second=4,
@@ -164,52 +262,26 @@ def train(cfg: TrainConfig) -> None:
             train_loss=0.0,
             val_loss=0.0,
             exact_match=0.0,
+            beam_display="[dim]—",
+            valid=0.0,
             lr=cfg.lr,
             star="",
         )
 
         for epoch in range(1, cfg.epochs + 1):
+            ds.resample_labels()
+            shuffle = torch.randperm(n_train, device=device, generator=train_gen)
+            shuffled_train = train_idx[shuffle]
+
+            # ── train ─────────────────────────────────────────
             model.train()
-            total_loss = 0.0
-            for origins, dests, labels in train_dl:
-                origins = origins.to(device)
-                dests = dests.to(device)
-                labels = labels.to(device)
+            epoch_loss = torch.zeros(1, device=device)
 
-                logits = model(
-                    graph.x,
-                    graph.edge_index,
-                    graph.edge_attr,
-                    origins,
-                    dests,
-                    labels=labels,
-                    sampling_p=cfg.scheduled_sampling,
-                )
-                loss = _compute_loss(
-                    logits,
-                    labels,
-                    cfg.model_type,
-                    label_smoothing=cfg.label_smoothing,
-                )
+            for batch_start in range(0, n_train, cfg.batch_size):
+                batch_idx = shuffled_train[batch_start : batch_start + cfg.batch_size]
+                _, origins, dests, labels = ds.get_batch(batch_idx)
 
-                optimizer.zero_grad()
-                loss.backward()
-                nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
-                optimizer.step()
-                total_loss += loss.item() * origins.size(0)
-
-            scheduler.step()
-            avg_train = total_loss / n_train
-
-            # --- validation ---
-            model.eval()
-            val_loss = 0.0
-            all_metrics: list[RouteMetrics] = []
-            with torch.no_grad():
-                for origins, dests, labels in val_dl:
-                    origins = origins.to(device)
-                    dests = dests.to(device)
-                    labels = labels.to(device)
+                with torch.amp.autocast("cuda", enabled=use_amp):
                     logits = model(
                         graph.x,
                         graph.edge_index,
@@ -219,51 +291,120 @@ def train(cfg: TrainConfig) -> None:
                         labels=labels,
                         sampling_p=cfg.scheduled_sampling,
                     )
-                    vl = _compute_loss(
+                    loss = _compute_loss(
                         logits,
                         labels,
                         cfg.model_type,
                         label_smoothing=cfg.label_smoothing,
                     )
-                    val_loss += vl.item() * origins.size(0)
 
-                    all_metrics.append(
-                        compute_metrics(
+                optimizer.zero_grad(set_to_none=True)
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+                scheduler.step()
+                epoch_loss += loss.detach() * origins.size(0)
+
+            avg_train = epoch_loss.item() / n_train
+
+            # ── validate ──────────────────────────────────────
+            model.eval()
+            epoch_val_loss = torch.zeros(1, device=device)
+            batch_metrics: list[RouteMetrics] = []
+
+            run_beam = (
+                cfg.beam_eval_interval > 0 and epoch % cfg.beam_eval_interval == 0
+            ) or epoch == cfg.epochs
+
+            with torch.no_grad():
+                for batch_start in range(0, n_val, cfg.batch_size):
+                    batch_idx = val_idx[batch_start : batch_start + cfg.batch_size]
+                    raw_indices, origins, dests, labels = ds.get_batch(batch_idx)
+
+                    with torch.amp.autocast("cuda", enabled=use_amp):
+                        logits = model(
+                            graph.x,
+                            graph.edge_index,
+                            graph.edge_attr,
+                            origins,
+                            dests,
+                            labels=labels,
+                        )
+                        vl = _compute_loss(
                             logits,
                             labels,
                             cfg.model_type,
+                            label_smoothing=0.0,
+                        )
+                    epoch_val_loss += vl.detach() * origins.size(0)
+
+                    # ONE bulk transfer instead of per-element .item()
+                    all_valid = ds.get_all_labels_batch(raw_indices)
+
+                    if run_beam:
+                        beam_results = beam_decode(
+                            raw_model,
+                            graph.x,
+                            graph.edge_index,
+                            graph.edge_attr,
+                            origins,
+                            dests,
+                            beam_width=cfg.beam_width,
+                        )
+                    else:
+                        beam_results = _greedy_as_beam(
+                            logits,
+                            cfg.model_type,
+                            device,
+                        )
+
+                    batch_metrics.append(
+                        compute_metrics(
+                            beam_results,
+                            cfg.model_type,
                             n_lines=ds.n_lines,
                             n_stations=ds.n_stations,
+                            all_valid_labels=all_valid,
                         )
                     )
-            avg_val = val_loss / n_val
 
-            # aggregate metrics across batches
-            total_em = sum(m.exact_match * m.n_examples for m in all_metrics)
-            total_n = sum(m.n_examples for m in all_metrics)
-            epoch_em = total_em / max(total_n, 1)
+            avg_val = epoch_val_loss.item() / n_val
+            epoch_metrics = _aggregate_metrics(batch_metrics)
+
+            lr_now = optimizer.param_groups[0]["lr"]
 
             star = ""
             if avg_val < best_val:
                 best_val = avg_val
+                best_metrics = epoch_metrics
                 star = "[bold green]★[/]"
                 ckpt = cfg.checkpoint_dir / f"model_{cfg.model_type}_best.pt"
-                torch.save(model.state_dict(), ckpt)
+                torch.save(raw_model.state_dict(), ckpt)
+
+            beam_str = (
+                f"[bold yellow]{epoch_metrics.any_in_beam:.1%}"
+                if run_beam
+                else "[dim]—"
+            )
 
             progress.update(
                 epoch_task,
                 advance=1,
                 train_loss=avg_train,
                 val_loss=avg_val,
-                exact_match=epoch_em,
-                lr=scheduler.get_last_lr()[0],
+                exact_match=epoch_metrics.exact_match,
+                beam_display=beam_str,
+                valid=epoch_metrics.topologically_valid,
+                lr=lr_now,
                 star=star,
             )
+            logger.log(epoch, avg_train, avg_val, epoch_metrics, run_beam)
 
     rprint(f"\n[bold green]Done.[/] Best val loss: {best_val:.4f}")
-    if all_metrics:
-        final = all_metrics[-1]  # last epoch's last batch (approximate)
-        rprint(f"Final metrics: {final}")
+    if best_metrics:
+        rprint(f"Best metrics: {best_metrics}")
     rprint(f"Checkpoint → {cfg.checkpoint_dir / f'model_{cfg.model_type}_best.pt'}")
 
 
