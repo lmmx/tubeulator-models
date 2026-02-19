@@ -134,6 +134,8 @@ def _try_compile(model: nn.Module) -> nn.Module:
 
 
 def train(cfg: TrainConfig) -> None:
+    import time
+
     from rich import print as rprint
     from rich.progress import (
         BarColumn,
@@ -141,6 +143,8 @@ def train(cfg: TrainConfig) -> None:
         TextColumn,
         TimeRemainingColumn,
     )
+
+    t_start = time.monotonic()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     use_amp = device.type == "cuda"
@@ -326,6 +330,22 @@ def train(cfg: TrainConfig) -> None:
                 cfg.beam_eval_interval > 0 and epoch % cfg.beam_eval_interval == 0
             ) or epoch == cfg.epochs
 
+            n_val_batches = (n_val + cfg.batch_size - 1) // cfg.batch_size
+
+            if run_beam:
+                beam_progress = Progress(
+                    BarColumn(),
+                    "[progress.percentage]{task.percentage:>3.0f}%",
+                    TimeRemainingColumn(),
+                    TextColumn("·"),
+                    TextColumn("beam eval"),
+                    transient=True,
+                )
+                beam_progress.start()
+                beam_task = beam_progress.add_task("Beam", total=n_val_batches)
+            else:
+                beam_progress = None
+
             with torch.no_grad():
                 for batch_start in range(0, n_val, cfg.batch_size):
                     batch_idx = val_idx[batch_start : batch_start + cfg.batch_size]
@@ -348,7 +368,6 @@ def train(cfg: TrainConfig) -> None:
                         )
                     epoch_val_loss += vl.detach() * origins.size(0)
 
-                    # ONE bulk transfer instead of per-element .item()
                     all_valid = ds.get_all_labels_batch(raw_indices)
 
                     if run_beam:
@@ -361,6 +380,7 @@ def train(cfg: TrainConfig) -> None:
                             dests,
                             beam_width=cfg.beam_width,
                         )
+                        beam_progress.update(beam_task, advance=1)
                     else:
                         beam_results = _greedy_as_beam(
                             logits,
@@ -377,6 +397,9 @@ def train(cfg: TrainConfig) -> None:
                             all_valid_labels=all_valid,
                         )
                     )
+
+            if beam_progress is not None:
+                beam_progress.stop()
 
             avg_val = epoch_val_loss.item() / n_val
             epoch_metrics = _aggregate_metrics(batch_metrics)
@@ -410,7 +433,12 @@ def train(cfg: TrainConfig) -> None:
             )
             logger.log(epoch, avg_train, avg_val, epoch_metrics, run_beam)
 
-    rprint(f"\n[bold green]Done.[/] Best val loss: {best_val:.4f}")
+    elapsed = time.monotonic() - t_start
+    m, s = divmod(int(elapsed), 60)
+    h, m = divmod(m, 60)
+    time_str = f"{h}h{m:02d}m{s:02d}s" if h else f"{m}m{s:02d}s"
+
+    rprint(f"\n[bold green]Done.[/] Best val loss: {best_val:.4f} ({time_str})")
     if best_metrics:
         rprint(f"Best metrics: {best_metrics}")
     rprint(f"Checkpoint → {cfg.checkpoint_dir / f'model_{cfg.model_type}_best.pt'}")
