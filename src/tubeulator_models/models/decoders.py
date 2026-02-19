@@ -205,10 +205,6 @@ class StationSeqDecoder(nn.Module):
         labels=None,
         sampling_p: float = 0.0,
     ):
-        """
-        H_all: (N, d_model) — all node embeddings from encoder.
-        origins: (B,) — origin station indices (starting position for masking).
-        """
         device = h_origin.device
         h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
 
@@ -219,40 +215,30 @@ class StationSeqDecoder(nn.Module):
         else:
             use_own = torch.zeros(self.max_len, dtype=torch.bool, device=device)
 
-        current = origins  # (B,) — where we are right now
+        current = origins  # (B,)
         all_logits = []
 
         for step in range(self.max_len):
             h = self.gru(h, h)
-            q = self.query_proj(h)  # (B, d)
-            logits = torch.matmul(q, keys.t())  # (B, N)
+            q = self.query_proj(h)
+            logits = torch.matmul(q, keys.t())
 
-            # Mask to adjacent stations only (inference only — training
-            # uses scheduled sampling which breaks the adjacency chain)
-            current = origins
-            all_logits = []
+            if self.adj_mask is not None:
+                mask = self.adj_mask[current]
+                logits = logits.masked_fill(~mask, float("-inf"))
 
-            for step in range(self.max_len):
-                h = self.gru(h, h)
-                q = self.query_proj(h)
-                logits = torch.matmul(q, keys.t())
+            all_logits.append(logits)
 
-                if self.adj_mask is not None:
-                    mask = self.adj_mask[current]
-                    logits = logits.masked_fill(~mask, float("-inf"))
+            own_tok = logits.argmax(-1)
 
-                all_logits.append(logits)
+            if labels is not None and step < labels.size(1):
+                teacher_tok = labels[:, step].clamp(min=0)
+                tok = torch.where(use_own[step], own_tok, teacher_tok)
+                current = teacher_tok  # always follow teacher for masking
+            else:
+                tok = own_tok
+                current = tok
 
-                own_tok = logits.argmax(-1)
+            h = h + self.station_emb(tok)
 
-                if labels is not None and step < labels.size(1):
-                    teacher_tok = labels[:, step].clamp(min=0)
-                    tok = torch.where(use_own[step], own_tok, teacher_tok)
-                    current = teacher_tok  # always follow teacher for masking
-                else:
-                    tok = own_tok
-                    current = tok
-
-                h = h + self.station_emb(tok)
-
-        return {"station": torch.stack(all_logits, dim=1)}  # (B, max_len, N)
+        return {"station": torch.stack(all_logits, dim=1)}
