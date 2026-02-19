@@ -25,6 +25,9 @@ plot:
 
 # ── Training ─────────────────────────────────────────────────
 
+train-hi profile="" *args="":
+    uv run --group pyg tm-hierarchical {{ if profile != "" { "--profile " + profile } else { "" } }} {{args}}
+
 # Train a single model (e.g. just train line)
 train model="change" profile="" *args="":
     uv run --group pyg tm-train --model {{model}} {{ if profile != "" { "--profile " + profile } else { "" } }} {{args}}

@@ -20,7 +20,7 @@ scheduled_sampling = 0.5
 
 # ── Inference ────────────────────────────────────────────────
 beam_eval_interval = 0
-beam_eval_sample = 1.0
+beam_eval_sample = 0.2
 beam_width = 5
 
 # ── Route enumeration ────────────────────────────────────────
@@ -80,6 +80,11 @@ n_heads = 8
 n_enc_layers = 6
 dropout = 0.1
 weight_decay = 1e-4
+
+[profiles.full.model.change]
+dropout = 0.2
+beam_width = 15
+epochs = 150
 
 [profiles.full.model.station]
 max_seq = 50
