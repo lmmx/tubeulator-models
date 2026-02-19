@@ -32,7 +32,9 @@ def beam_decode(
     dec = model.decoder
 
     if mt == "station":
-        return _beam_pointer_batched(dec, h_o, h_d, H, beam_width, origins.device)
+        return _beam_pointer_batched(
+            dec, h_o, h_d, H, beam_width, origins.device, origins
+        )
     else:
         return _beam_structured_batched(dec, h_o, h_d, mt, beam_width, origins.device)
 
@@ -181,12 +183,11 @@ def _beam_pointer_batched(
     H_all: torch.Tensor,
     beam_width: int,
     device: torch.device,
+    origins: torch.Tensor,
 ) -> list[list[tuple[torch.Tensor, float]]]:
     """
     Fully batched beam search for the station (pointer) decoder.
-
-    Maintains a (B * beam_width, d) hidden state tensor and does
-    one matmul against keys per step instead of B separate passes.
+    Tracks current station per beam and applies adjacency masking.
     """
     B = h_o.size(0)
     max_len = dec.max_len
@@ -194,77 +195,72 @@ def _beam_pointer_batched(
     N = H_all.size(0)
 
     keys = dec.key_proj(H_all)  # (N, d)
-
     h_init = torch.relu(dec.init_proj(torch.cat([h_o, h_d], dim=-1)))  # (B, d)
 
-    # Expand to (B, 1, d) then repeat for beam_width, flatten to (B*1, d)
-    # At step 0 we have 1 beam per example; after first step we expand to K
     h = h_init  # (B, d)
-
-    # Track: for each (batch, beam) — cumulative log prob and token sequence
-    # Shape convention: always (B * n_beams, ...) where n_beams starts at 1 then becomes K
     cum_lps = torch.zeros(B, 1, device=device)  # (B, 1)
-    # Token sequences stored as tensor: (B, n_beams, max_len)
     token_seqs = torch.zeros(B, 1, max_len, dtype=torch.long, device=device)
+    # Track current station: (B, n_beams)
+    current = origins.unsqueeze(1)  # (B, 1)
     n_beams = 1
 
     for step in range(max_len):
         # h: (B * n_beams, d)
-        h_next = dec.gru(h, h)  # (B * n_beams, d)
+        h_next = dec.gru(h, h)
         q = dec.query_proj(h_next)  # (B * n_beams, d)
         logits = torch.matmul(q, keys.t())  # (B * n_beams, N)
-        lp = F.log_softmax(logits, dim=-1)  # (B * n_beams, N)
+
+        # Apply adjacency mask
+        if dec.adj_mask is not None:
+            current_flat = current.reshape(-1)  # (B * n_beams,)
+            mask = dec.adj_mask[current_flat]  # (B * n_beams, N)
+            logits = logits.masked_fill(~mask, float("-inf"))
+
+        lp = F.log_softmax(logits, dim=-1)
 
         # Reshape to (B, n_beams, N)
         lp = lp.view(B, n_beams, N)
         h_next = h_next.view(B, n_beams, -1)
 
-        # Combined scores: (B, n_beams, N)
         scores = cum_lps.unsqueeze(-1) + lp  # (B, n_beams, N)
+        scores_flat = scores.view(B, -1)  # (B, n_beams * N)
 
-        # Flatten beams*vocab: (B, n_beams * N)
-        scores_flat = scores.view(B, -1)
-
-        # Top-K across all beams×vocab
         actual_k = min(K, scores_flat.size(-1))
-        top_scores, top_flat_idx = scores_flat.topk(actual_k, dim=-1)  # (B, K)
+        top_scores, top_flat_idx = scores_flat.topk(actual_k, dim=-1)
 
-        # Decode flat index into beam index and token
-        beam_idx = top_flat_idx // N  # (B, K) — which beam
-        tok_idx = top_flat_idx % N  # (B, K) — which token
+        beam_idx = top_flat_idx // N
+        tok_idx = top_flat_idx % N
 
-        # Gather hidden states from selected beams
-        # h_next: (B, n_beams, d) -> select beam_idx -> (B, K, d)
+        # Gather hidden states
         d_model = h_next.size(-1)
-        h_selected = h_next.gather(
-            1, beam_idx.unsqueeze(-1).expand(-1, -1, d_model)
-        )  # (B, K, d)
+        h_selected = h_next.gather(1, beam_idx.unsqueeze(-1).expand(-1, -1, d_model))
 
-        # Feedback: add station embedding
-        tok_flat = tok_idx.reshape(-1)  # (B*K,)
-        fb = dec.station_emb(tok_flat).view(B, actual_k, -1)  # (B, K, d)
-        h = (h_selected + fb).view(B * actual_k, -1)  # (B*K, d)
+        # Feedback
+        tok_flat = tok_idx.reshape(-1)
+        fb = dec.station_emb(tok_flat).view(B, actual_k, -1)
+        h = (h_selected + fb).view(B * actual_k, -1)
 
-        # Update sequences: gather from previous beams, then write new token
+        # Update sequences
         if step == 0 and n_beams == 1:
-            # First step: expand from 1 beam to K
-            new_seqs = token_seqs.expand(-1, actual_k, -1).clone()  # (B, K, max_len)
+            new_seqs = token_seqs.expand(-1, actual_k, -1).clone()
         else:
             new_seqs = token_seqs.gather(
                 1, beam_idx.unsqueeze(-1).expand(-1, -1, max_len)
-            )  # (B, K, max_len)
+            )
         new_seqs[:, :, step] = tok_idx
         token_seqs = new_seqs
 
-        cum_lps = top_scores  # (B, K)
+        # Update current station per beam
+        current = tok_idx  # (B, K)
+
+        cum_lps = top_scores
         n_beams = actual_k
 
-    # Package results
     results: list[list[tuple[torch.Tensor, float]]] = []
     for b in range(B):
         beams = []
         for k in range(n_beams):
-            seq = token_seqs[b, k]  # (max_len,)
+            seq = token_seqs[b, k]
             score = cum_lps[b, k].item()
             beams.append((seq, score))
         beams.sort(key=lambda x: x[1], reverse=True)
