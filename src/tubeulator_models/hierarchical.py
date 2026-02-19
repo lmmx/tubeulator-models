@@ -213,13 +213,13 @@ def evaluate_hierarchical(
         "[progress.percentage]{task.percentage:>3.0f}%",
         TimeRemainingColumn(),
         TextColumn("·"),
-        TextColumn("[green]{task.fields[matched]}/{task.fields[total]}"),
+        TextColumn("[green]{task.fields[matched]}/{task.fields[n_examples]}"),
         TextColumn("({task.fields[pct]:.1%})"),
         refresh_per_second=4,
     ) as progress:
         n_batches = (n_val + cfg.batch_size - 1) // cfg.batch_size
         task = progress.add_task(
-            "Hierarchical eval", total=n_batches, matched=0, total_ex=0, pct=0.0
+            "Hierarchical eval", total=n_batches, matched=0, n_examples=0, pct=0.0
         )
 
         for batch_start in range(0, n_val, cfg.batch_size):
@@ -286,7 +286,7 @@ def evaluate_hierarchical(
                 task,
                 advance=1,
                 matched=matched_total,
-                total=total,
+                n_examples=total,
                 pct=matched_total / max(total, 1),
             )
 
@@ -308,8 +308,8 @@ def main():
     p.add_argument("--profile", default=None)
     args = p.parse_args()
 
-    from .topology import extract
     from .config import TrainConfig
+    from .topology import extract
 
     cfg = TrainConfig.from_defaults(model_type="change", profile=args.profile)
     topo = extract(cfg.gtfs_path)
