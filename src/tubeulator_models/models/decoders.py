@@ -229,21 +229,30 @@ class StationSeqDecoder(nn.Module):
 
             # Mask to adjacent stations only (inference only — training
             # uses scheduled sampling which breaks the adjacency chain)
-            if self.adj_mask is not None and not self.training:
-                mask = self.adj_mask[current]  # (B, N)
-                logits = logits.masked_fill(~mask, float("-inf"))
+            current = origins
+            all_logits = []
 
-            all_logits.append(logits)
+            for step in range(self.max_len):
+                h = self.gru(h, h)
+                q = self.query_proj(h)
+                logits = torch.matmul(q, keys.t())
 
-            own_tok = logits.argmax(-1)
+                if self.adj_mask is not None:
+                    mask = self.adj_mask[current]
+                    logits = logits.masked_fill(~mask, float("-inf"))
 
-            if labels is not None and step < labels.size(1):
-                teacher_tok = labels[:, step].clamp(min=0)
-                tok = torch.where(use_own[step], own_tok, teacher_tok)
-            else:
-                tok = own_tok
+                all_logits.append(logits)
 
-            current = tok
-            h = h + self.station_emb(tok)
+                own_tok = logits.argmax(-1)
+
+                if labels is not None and step < labels.size(1):
+                    teacher_tok = labels[:, step].clamp(min=0)
+                    tok = torch.where(use_own[step], own_tok, teacher_tok)
+                    current = teacher_tok  # always follow teacher for masking
+                else:
+                    tok = own_tok
+                    current = tok
+
+                h = h + self.station_emb(tok)
 
         return {"station": torch.stack(all_logits, dim=1)}  # (B, max_len, N)

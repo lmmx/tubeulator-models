@@ -245,7 +245,7 @@ def train(cfg: TrainConfig) -> None:
 
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 
-    best_val = float("inf")
+    best_val = 0.0 if cfg.model_type == "station" else float("inf")
     best_metrics: RouteMetrics | None = None
     cfg.checkpoint_dir.mkdir(exist_ok=True)
     logger = MetricsLogger(cfg.model_type, cfg.hp_tag, cfg.checkpoint_dir.parent)
@@ -407,8 +407,17 @@ def train(cfg: TrainConfig) -> None:
             lr_now = optimizer.param_groups[0]["lr"]
 
             star = ""
-            if avg_val < best_val:
-                best_val = avg_val
+            improved = (
+                epoch_metrics.exact_match > best_val
+                if cfg.model_type == "station"
+                else avg_val < best_val
+            )
+            if improved:
+                best_val = (
+                    epoch_metrics.exact_match
+                    if cfg.model_type == "station"
+                    else avg_val
+                )
                 best_metrics = epoch_metrics
                 star = "[bold green]★[/]"
                 ckpt = cfg.checkpoint_dir / f"model_{cfg.model_type}_best.pt"
