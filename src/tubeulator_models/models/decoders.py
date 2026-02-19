@@ -173,27 +173,38 @@ class InterchangeDecoder(nn.Module):
 class StationSeqDecoder(nn.Module):
     """
     Model C — predicts full station sequence autoregressively.
-    Uses a pointer-style mechanism: scores over all station embeddings H.
+    Uses a pointer-style mechanism with adjacency masking: at each step,
+    only stations adjacent to the current station are valid candidates.
     """
 
     def __init__(self, d_model: int, n_stations: int, max_len: int = 40):
         super().__init__()
         self.max_len = max_len
         self.d_model = d_model
+        self.n_stations = n_stations
 
         self.init_proj = nn.Linear(2 * d_model, d_model)
         self.gru = nn.GRUCell(d_model, d_model)
         self.station_emb = nn.Embedding(n_stations, d_model)
 
-        # pointer attention: query from GRU, keys from encoder H
         self.query_proj = nn.Linear(d_model, d_model)
         self.key_proj = nn.Linear(d_model, d_model)
 
-    def forward(self, h_origin, h_dest, H_all, labels=None, sampling_p: float = 0.0):
-        """
-        H_all: (N, d_model) — all node embeddings from encoder (shared across batch).
-        We compute pointer logits over these.
-        """
+        # (N, N) boolean mask, set via set_adj_mask before training
+        self.register_buffer("adj_mask", None)
+
+    def set_adj_mask(self, mask: torch.Tensor) -> None:
+        self.adj_mask = mask
+
+    def forward(
+        self,
+        h_origin,
+        h_dest,
+        H_all,
+        origins,
+        labels=None,
+        sampling_p: float = 0.0,
+    ):
         device = h_origin.device
         h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
 
@@ -204,11 +215,19 @@ class StationSeqDecoder(nn.Module):
         else:
             use_own = torch.zeros(self.max_len, dtype=torch.bool, device=device)
 
+        current = origins  # (B,)
         all_logits = []
+
         for step in range(self.max_len):
             h = self.gru(h, h)
-            q = self.query_proj(h)  # (B, d)
-            logits = torch.matmul(q, keys.t())  # (B, N)
+            q = self.query_proj(h)
+            logits = torch.matmul(q, keys.t())
+
+            if self.adj_mask is not None:
+                mask = self.adj_mask[current]
+                fill_val = -1e4
+                logits = logits.masked_fill(~mask, fill_val)
+
             all_logits.append(logits)
 
             own_tok = logits.argmax(-1)
@@ -216,9 +235,11 @@ class StationSeqDecoder(nn.Module):
             if labels is not None and step < labels.size(1):
                 teacher_tok = labels[:, step].clamp(min=0)
                 tok = torch.where(use_own[step], own_tok, teacher_tok)
+                current = teacher_tok  # always follow teacher for masking
             else:
                 tok = own_tok
+                current = tok
 
             h = h + self.station_emb(tok)
 
-        return {"station": torch.stack(all_logits, dim=1)}  # (B, max_len, N)
+        return {"station": torch.stack(all_logits, dim=1)}

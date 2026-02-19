@@ -5,6 +5,7 @@ from __future__ import annotations
 import heapq
 import json
 from dataclasses import dataclass
+from itertools import product
 from pathlib import Path
 
 from .topology import Topology
@@ -33,10 +34,12 @@ class Route:
         return list(self.stations)
 
     def signature(self) -> tuple:
-        """Hashable route identity for deduplication.
-        Two routes are 'same' if they use the same lines at the same interchanges.
+        """Station sequence is the canonical route identity.
+
+        Two routes visiting the same stations in the same order are the same
+        physical journey regardless of which shared-track line they name.
         """
-        return tuple((ln, sts[-1]) for ln, _, sts in self.legs)
+        return tuple(self.stations)
 
 
 def find_routes(
@@ -139,6 +142,56 @@ def find_routes(
     return results
 
 
+def _expand_line_variants(
+    route: Route,
+    topo: Topology,
+    ln2i: dict[str, int],
+    st2i: dict[str, int],
+) -> list[dict]:
+    """Generate label dicts for all line-equivalent variants of a route.
+
+    For each leg, find which other lines serve the exact same station sequence
+    (shared track). Produce the cartesian product of all valid line assignments.
+    The station labels are identical across variants — only line (and possibly
+    direction) differ.
+    """
+    # For each leg, the set of lines that serve every edge in that leg
+    leg_line_options: list[list[str]] = []
+    for line, _dir, stations in route.legs:
+        equiv = topo.equivalent_lines_for_leg(line, stations)
+        leg_line_options.append(sorted(equiv))
+
+    station_label = [st2i[s] for s in route.stations]
+    variants: list[dict] = []
+    seen: set[tuple] = set()
+
+    for line_combo in product(*leg_line_options):
+        # Build legs with the new line assignments
+        label_line = []
+        label_change = []
+        for (_, _, sts), new_ln in zip(route.legs, line_combo):
+            d = topo.direction_of(new_ln, sts[0], sts[-1]) if len(sts) >= 2 else 0
+            label_line.append((ln2i[new_ln], d))
+            label_change.append((ln2i[new_ln], d, st2i[sts[-1]]))
+
+        # Dedup identical integer labels (shouldn't happen, but safe)
+        key = (tuple(tuple(x) for x in label_line),)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        variants.append(
+            {
+                "label_line": label_line,
+                "label_change": label_change,
+                "label_station": station_label,
+                "travel_time": route.travel_time,
+            }
+        )
+
+    return variants
+
+
 def build_dataset(
     topo: Topology,
     max_transfers: int,
@@ -146,7 +199,11 @@ def build_dataset(
     transfer_penalty: float,
     output_path: Path | None = None,
 ) -> list[dict]:
-    """Build training examples for all OD pairs. Stores ALL valid routes per pair."""
+    """Build training examples for all OD pairs.
+
+    Stores all valid routes per pair, expanded with line-equivalent variants
+    for shared-track segments.
+    """
     from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
     stations = topo.all_stations
@@ -156,6 +213,7 @@ def build_dataset(
 
     examples = []
     n_routes = 0
+    n_variants = 0
 
     with Progress(
         SpinnerColumn(),
@@ -165,6 +223,7 @@ def build_dataset(
         TextColumn("·"),
         TextColumn("[green]{task.fields[pairs]:,} pairs"),
         TextColumn("[green]{task.fields[routes]:,} routes"),
+        TextColumn("[green]{task.fields[variants]:,} variants"),
         refresh_per_second=10,
     ) as progress:
         task = progress.add_task(
@@ -172,6 +231,7 @@ def build_dataset(
             total=len(stations),
             pairs=0,
             routes=0,
+            variants=0,
         )
 
         for origin in stations:
@@ -191,29 +251,38 @@ def build_dataset(
 
                 route_labels = []
                 for route in routes:
-                    route_labels.append(
-                        {
-                            "label_line": [
-                                (ln2i[ln], d) for ln, d in route.label_line()
-                            ],
-                            "label_change": [
-                                (ln2i[ln], d, st2i[st])
-                                for ln, d, st in route.label_change()
-                            ],
-                            "label_station": [st2i[s] for s in route.label_station()],
-                            "travel_time": route.travel_time,
-                        }
-                    )
+                    variants = _expand_line_variants(route, topo, ln2i, st2i)
+                    route_labels.extend(variants)
 
-                n_routes += len(route_labels)
+                # Dedup across routes (different Dijkstra paths might produce
+                # the same label after line expansion)
+                seen_labels: set[tuple] = set()
+                deduped: list[dict] = []
+                for rl in route_labels:
+                    key = (
+                        tuple(tuple(x) for x in rl["label_line"]),
+                        tuple(tuple(x) for x in rl["label_change"]),
+                    )
+                    if key not in seen_labels:
+                        seen_labels.add(key)
+                        deduped.append(rl)
+
+                n_routes += len(routes)
+                n_variants += len(deduped)
                 examples.append(
                     {
                         "origin": st2i[origin],
                         "destination": st2i[dest],
-                        "routes": route_labels,
+                        "routes": deduped,
                     }
                 )
-            progress.update(task, advance=1, pairs=len(examples), routes=n_routes)
+            progress.update(
+                task,
+                advance=1,
+                pairs=len(examples),
+                routes=n_routes,
+                variants=n_variants,
+            )
 
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -222,10 +291,12 @@ def build_dataset(
                 {"stations": stations, "lines": lines, "examples": examples},
                 f,
             )
-        avg = n_routes / max(len(examples), 1)
+        avg_r = n_routes / max(len(examples), 1)
+        avg_v = n_variants / max(len(examples), 1)
         print(
             f"Saved {len(examples):,} OD pairs, "
-            f"{n_routes:,} routes ({avg:.1f} avg per pair) → {output_path}"
+            f"{n_routes:,} routes ({avg_r:.1f} avg), "
+            f"{n_variants:,} with line variants ({avg_v:.1f} avg) → {output_path}"
         )
 
     return examples

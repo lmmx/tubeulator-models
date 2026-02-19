@@ -57,6 +57,7 @@ max_seq = 4
 
 [model.station]
 max_seq = 40
+label_smoothing = 0.0
 
 # ── Profiles ─────────────────────────────────────────────────
 [profiles.dev]
@@ -81,3 +82,4 @@ weight_decay = 1e-4
 max_seq = 50
 batch_size = 2048
 lr = 2.8e-4
+beam_width = 20
