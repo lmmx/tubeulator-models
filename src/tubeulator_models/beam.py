@@ -159,9 +159,7 @@ def _beam_structured_batched(
 
                             cand_h.append(h_next[ki].unsqueeze(0))
                             cand_fb.append(fb)
-                            cand_seqs.append(
-                                seqs[ki] + [ln_tok.item(), dir_tok.item()]
-                            )
+                            cand_seqs.append(seqs[ki] + [ln_tok.item(), dir_tok.item()])
                             cand_lps.append(score)
 
             # Prune to top beam_width
