@@ -32,6 +32,8 @@ class Topology:
     line_order: dict[str, list[str]]
     # line -> (from_stop, to_stop) -> median travel time in seconds
     edge_time: dict[str, dict[tuple[str, str], float]]
+    # (from_stop, to_stop) -> frozenset of lines serving this directed edge
+    edge_lines: dict[tuple[str, str], frozenset[str]]
 
     def neighbors(self, station: str, line: str) -> set[str]:
         return self.line_adj.get(line, {}).get(station, set())
@@ -47,6 +49,25 @@ class Topology:
             return 0 if order.index(to_st) > order.index(from_st) else 1
         except ValueError:
             return 0
+
+    def lines_on_edge(self, from_st: str, to_st: str) -> frozenset[str]:
+        """All lines that serve this directed edge."""
+        return self.edge_lines.get((from_st, to_st), frozenset())
+
+    def equivalent_lines_for_leg(
+        self, line: str, stations: list[str]
+    ) -> frozenset[str]:
+        """All lines that serve every edge in this leg's station sequence."""
+        if len(stations) < 2:
+            return frozenset({line})
+        valid: set[str] | None = None
+        for s1, s2 in zip(stations, stations[1:]):
+            el = self.edge_lines.get((s1, s2), frozenset())
+            if valid is None:
+                valid = set(el)
+            else:
+                valid &= el
+        return frozenset(valid) if valid else frozenset({line})
 
     @property
     def all_stations(self) -> list[str]:
@@ -127,9 +148,19 @@ def extract(gtfs_path: Path) -> Topology:
     line_order = {ln: max(seqs, key=len) for ln, seqs in line_seqs.items()}
     interchanges = {s for s, ls in station_lines.items() if len(ls) >= 2}
 
+    # Build edge → lines equivalence map
+    edge_lines_raw: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for line, adj in line_adj.items():
+        for station, neighbors in adj.items():
+            for neighbor in neighbors:
+                edge_lines_raw[(station, neighbor)].add(line)
+    edge_lines = {pair: frozenset(lines) for pair, lines in edge_lines_raw.items()}
+
     n_timed = sum(len(e) for e in edge_time.values())
     n_total = sum(sum(len(nbrs) for nbrs in adj.values()) for adj in line_adj.values())
+    n_shared = sum(1 for lines in edge_lines.values() if len(lines) > 1)
     print(f"  travel times: {n_timed} edges timed out of {n_total} adjacencies")
+    print(f"  shared edges: {n_shared} edges served by multiple lines")
 
     return Topology(
         line_adj=dict(line_adj),
@@ -138,4 +169,5 @@ def extract(gtfs_path: Path) -> Topology:
         stop_names=stop_names,
         line_order=line_order,
         edge_time=edge_time,
+        edge_lines=edge_lines,
     )
