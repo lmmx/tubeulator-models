@@ -463,13 +463,28 @@ def train(cfg: TrainConfig) -> None:
             )
             logger.log(epoch, avg_train, avg_val, epoch_metrics, run_beam)
 
-            if epoch_metrics.stratified:
-                label = "len" if cfg.model_type == "station" else "legs"
-                parts = [
-                    f"{k}{label}:{acc:.0%}({n})"
-                    for k, (acc, n) in epoch_metrics.stratified.items()
-                ]
-                rprint(f"  stratified: {' | '.join(parts)}")
+            if run_beam and epoch_metrics.stratified:
+                if cfg.model_type == "station":
+                    bucket_ranges = [(2, 5), (6, 10), (11, 20), (21, 30), (31, 50)]
+                    bucket_parts = []
+                    for lo, hi in bucket_ranges:
+                        total_n = 0
+                        total_correct = 0
+                        for k, (acc, n) in epoch_metrics.stratified.items():
+                            if lo <= k <= hi:
+                                total_n += n
+                                total_correct += acc * n
+                        if total_n > 0:
+                            bucket_parts.append(
+                                f"{lo}-{hi}st:{total_correct / total_n:.0%}({total_n})"
+                            )
+                    rprint(f"  stratified: {' | '.join(bucket_parts)}")
+                else:
+                    parts = [
+                        f"{k}legs:{acc:.0%}({n})"
+                        for k, (acc, n) in epoch_metrics.stratified.items()
+                    ]
+                    rprint(f"  stratified: {' | '.join(parts)}")
 
     elapsed = time.monotonic() - t_start
     m, s = divmod(int(elapsed), 60)
