@@ -21,6 +21,7 @@ class RouteMetrics:
     station_acc: float | None
     topologically_valid: float
     n_examples: int
+    stratified: dict[int, tuple[float, int]] | None = None
 
     def __str__(self) -> str:
         parts = [
@@ -124,6 +125,7 @@ def compute_metrics(
     n_lines: int,
     n_stations: int,
     all_valid_labels: list[list[torch.Tensor]],
+    strat_keys: torch.Tensor | None = None,
 ) -> RouteMetrics:
     """
     Compute metrics from beam search output.
@@ -140,18 +142,21 @@ def compute_metrics(
     line_c, line_t = 0, 0
     dir_c, dir_t = 0, 0
     station_c, station_t = 0, 0
+    top1_matches: list[bool] = []
 
     for b in range(B):
         routes = all_valid_labels[b]
         beams = beam_results[b]
 
         if not beams:
+            top1_matches.append(False)
             continue
 
         top_pred = beams[0][0]  # best beam = top-1 prediction
 
         # Exact match: does top-1 prediction match any valid route?
         top1_match = any(_sequences_match(top_pred, lbl) for lbl in routes)
+        top1_matches.append(top1_match)
         if top1_match:
             em_correct += 1
 
@@ -186,6 +191,17 @@ def compute_metrics(
         if _is_valid(top_pred, model_type, n_lines, n_stations, routes[0]):
             valid_correct += 1
 
+        stratified = None
+        if strat_keys is not None:
+            from collections import defaultdict
+
+            buckets: dict[int, list[bool]] = defaultdict(list)
+            for match, key in zip(top1_matches, strat_keys.tolist()):
+                buckets[key].append(match)
+            stratified = {
+                k: (sum(v) / len(v), len(v)) for k, v in sorted(buckets.items())
+            }
+
     return RouteMetrics(
         exact_match=em_correct / max(B, 1),
         any_in_beam=beam_correct / max(B, 1),
@@ -194,4 +210,5 @@ def compute_metrics(
         station_acc=station_c / max(station_t, 1) if station_t > 0 else None,
         topologically_valid=valid_correct / max(B, 1),
         n_examples=B,
+        stratified=stratified,
     )

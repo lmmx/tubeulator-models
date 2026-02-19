@@ -97,6 +97,14 @@ def _greedy_as_beam(
     raise ValueError(model_type)
 
 
+def _n_legs(labels: torch.Tensor, model_type: str) -> torch.Tensor:
+    """(B,) tensor: number of legs for line/change, or non-pad token count for station."""
+    if model_type == "station":
+        return (labels != PAD).sum(dim=1)
+    stride = 2 if model_type == "line" else 3
+    return (labels[:, 0::stride] != PAD).sum(dim=1)
+
+
 def _aggregate_metrics(all_metrics: list[RouteMetrics]) -> RouteMetrics:
     total_n = sum(m.n_examples for m in all_metrics)
     if total_n == 0:
@@ -112,6 +120,23 @@ def _aggregate_metrics(all_metrics: list[RouteMetrics]) -> RouteMetrics:
             return None
         return sum(v * n for v, n in vals) / sum(n for _, n in vals)
 
+    # Merge stratified dicts across batches
+    from collections import defaultdict
+
+    merged_strat: dict[int, list[tuple[float, int]]] = defaultdict(list)
+    has_strat = False
+    for m in all_metrics:
+        if m.stratified is not None:
+            has_strat = True
+            for k, (acc, n) in m.stratified.items():
+                merged_strat[k].append((acc, n))
+    stratified = None
+    if has_strat:
+        stratified = {
+            k: (sum(a * n for a, n in v) / sum(n for _, n in v), sum(n for _, n in v))
+            for k, v in sorted(merged_strat.items())
+        }
+
     return RouteMetrics(
         exact_match=_wavg("exact_match"),
         any_in_beam=_wavg("any_in_beam"),
@@ -120,6 +145,7 @@ def _aggregate_metrics(all_metrics: list[RouteMetrics]) -> RouteMetrics:
         station_acc=_wavg("station_acc"),
         topologically_valid=_wavg("topologically_valid"),
         n_examples=total_n,
+        stratified=stratified,
     )
 
 
@@ -245,7 +271,7 @@ def train(cfg: TrainConfig) -> None:
 
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 
-    best_val = 0.0 if cfg.model_type == "station" else float("inf")
+    best_val = 0.0
     best_metrics: RouteMetrics | None = None
     cfg.checkpoint_dir.mkdir(exist_ok=True)
     logger = MetricsLogger(cfg.model_type, cfg.hp_tag, cfg.checkpoint_dir.parent)
@@ -388,6 +414,8 @@ def train(cfg: TrainConfig) -> None:
                             device,
                         )
 
+                    strat_keys = _n_legs(labels, cfg.model_type)
+
                     batch_metrics.append(
                         compute_metrics(
                             beam_results,
@@ -395,6 +423,7 @@ def train(cfg: TrainConfig) -> None:
                             n_lines=ds.n_lines,
                             n_stations=ds.n_stations,
                             all_valid_labels=all_valid,
+                            strat_keys=strat_keys,
                         )
                     )
 
@@ -407,17 +436,9 @@ def train(cfg: TrainConfig) -> None:
             lr_now = optimizer.param_groups[0]["lr"]
 
             star = ""
-            improved = (
-                epoch_metrics.exact_match > best_val
-                if cfg.model_type == "station"
-                else avg_val < best_val
-            )
+            improved = epoch_metrics.exact_match > best_val
             if improved:
-                best_val = (
-                    epoch_metrics.exact_match
-                    if cfg.model_type == "station"
-                    else avg_val
-                )
+                best_val = epoch_metrics.exact_match
                 best_metrics = epoch_metrics
                 star = "[bold green]★[/]"
                 ckpt = cfg.checkpoint_dir / f"model_{cfg.model_type}_best.pt"
@@ -441,6 +462,14 @@ def train(cfg: TrainConfig) -> None:
                 star=star,
             )
             logger.log(epoch, avg_train, avg_val, epoch_metrics, run_beam)
+
+            if epoch_metrics.stratified:
+                label = "len" if cfg.model_type == "station" else "legs"
+                parts = [
+                    f"{k}{label}:{acc:.0%}({n})"
+                    for k, (acc, n) in epoch_metrics.stratified.items()
+                ]
+                rprint(f"  stratified: {' | '.join(parts)}")
 
     elapsed = time.monotonic() - t_start
     m, s = divmod(int(elapsed), 60)
