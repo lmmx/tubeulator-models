@@ -225,7 +225,8 @@ class StationSeqDecoder(nn.Module):
 
             if self.adj_mask is not None:
                 mask = self.adj_mask[current]
-                logits = logits.masked_fill(~mask, float("-inf"))
+                fill_val = -1e4
+                logits = logits.masked_fill(~mask, fill_val)
 
             all_logits.append(logits)
 

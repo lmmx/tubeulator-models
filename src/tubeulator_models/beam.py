@@ -214,7 +214,8 @@ def _beam_pointer_batched(
         if dec.adj_mask is not None:
             current_flat = current.reshape(-1)  # (B * n_beams,)
             mask = dec.adj_mask[current_flat]  # (B * n_beams, N)
-            logits = logits.masked_fill(~mask, float("-inf"))
+            fill_val = -1e4
+            logits = logits.masked_fill(~mask, fill_val)
 
         lp = F.log_softmax(logits, dim=-1)
 
