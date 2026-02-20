@@ -370,72 +370,14 @@ class TransformerStationDecoder(nn.Module):
         sampling_p: float = 0.0,
     ) -> dict[str, torch.Tensor]:
         if labels is not None:
-            if self.training and sampling_p > 0.0:
-                return self._forward_scheduled(
-                    h_dest, H_all, origins, labels, sampling_p
-                )
-            return self._forward_teacher_forced(h_dest, H_all, origins, labels)
+            return self._forward_teacher_forced(
+                h_dest,
+                H_all,
+                origins,
+                labels,
+                sampling_p,
+            )
         return self._forward_greedy(h_dest, H_all, origins, dests)
-
-    def _forward_scheduled(
-        self,
-        h_dest: torch.Tensor,
-        H_all: torch.Tensor,
-        origins: torch.Tensor,
-        labels: torch.Tensor,
-        sampling_p: float,
-    ) -> dict[str, torch.Tensor]:
-        """Teacher forcing with scheduled sampling — step-by-step.
-
-        At each step, with probability sampling_p, use the model's own
-        prediction instead of the teacher token.  This forces the model
-        to learn recovery from its own errors and maintain a diverse
-        output distribution (critical for beam search).
-        """
-        if labels.size(1) > self.max_len:
-            labels = labels[:, : self.max_len]
-
-        B, T = labels.shape
-        device = labels.device
-        memory = H_all.unsqueeze(0).expand(B, -1, -1)
-
-        # Build input sequence token by token, mixing teacher and own predictions
-        use_own = torch.rand(T, device=device) < sampling_p
-        # First token is always the origin (teacher), never sampled
-        use_own[0] = False
-
-        tokens = origins.unsqueeze(1)  # (B, 1) — start with origin
-        all_logits = []
-
-        for step in range(T):
-            tgt = self._embed_tokens(tokens, h_dest)
-            causal = self._causal_mask(tokens.size(1), device, tgt.dtype)
-
-            out = self.tf_decoder(tgt, memory, tgt_mask=causal)
-            step_logits = self.out_proj(out[:, -1, :])  # (B, V)
-
-            # Mask by the token we're "at" (teacher position for masking,
-            # same principle as the GRU: mask always follows ground truth)
-            if step < T:
-                mask_station = labels[:, step].clamp(min=0)
-            else:
-                mask_station = tokens[:, -1]
-            step_logits = self._apply_adj_mask(step_logits, mask_station)
-
-            all_logits.append(step_logits)
-
-            # Next input token: teacher or own prediction
-            if step < T - 1:
-                own_tok = step_logits.argmax(-1)  # (B,)
-                teacher_tok = labels[:, step]  # (B,)
-                if use_own[step + 1]:
-                    next_tok = own_tok
-                else:
-                    next_tok = teacher_tok.clamp(min=0)
-                tokens = torch.cat([tokens, next_tok.unsqueeze(1)], dim=1)
-
-        logits = torch.stack(all_logits, dim=1)  # (B, T, V)
-        return {"station": logits}
 
     def _forward_teacher_forced(
         self,
@@ -443,29 +385,45 @@ class TransformerStationDecoder(nn.Module):
         H_all: torch.Tensor,
         origins: torch.Tensor,
         labels: torch.Tensor,
+        sampling_p: float = 0.0,
     ) -> dict[str, torch.Tensor]:
-        """Parallel teacher-forced forward pass for training and eval loss."""
-        # Truncate labels to max decoder length (matches GRU behavior)
+        """Parallel teacher-forced forward with optional token corruption.
+
+        With probability sampling_p, each teacher input token is replaced
+        with a random adjacent station — teaching the model to recover
+        from plausible errors without sacrificing parallel computation.
+        """
         if labels.size(1) > self.max_len:
             labels = labels[:, : self.max_len]
 
         B, T = labels.shape
         device = labels.device
 
-        # Decoder input: shift labels right, prepend origin
-        # labels  = [s0, s1, s2, ..., s_{T-1}]   (s0 == origin)
-        # dec_in  = [origin, s0, s1, ..., s_{T-2}]
-        # target  = [s0, s1, s2, ..., s_{T-1}]
+        # Decoder input: shift right, prepend origin
         dec_input = torch.cat([origins.unsqueeze(1), labels[:, :-1]], dim=1)  # (B, T)
 
-        tgt = self._embed_tokens(dec_input, h_dest)  # (B, T, d)
-        memory = H_all.unsqueeze(0).expand(B, -1, -1)  # (B, N, d)
+        # Token corruption: replace random positions with adjacent stations
+        if self.training and sampling_p > 0.0 and self.adj_mask is not None:
+            corrupt_mask = torch.rand(B, T, device=device) < sampling_p
+            corrupt_mask[:, 0] = False  # never corrupt the origin
+
+            # For each token, pick a random neighbor from adj_mask
+            adj = self.adj_mask[dec_input]  # (B, T, N) boolean
+            # Random scores, zeroed where not adjacent
+            noise = torch.rand(B, T, self.n_stations, device=device)
+            noise[~adj] = -1.0
+            random_neighbors = noise.argmax(dim=-1)  # (B, T) random adjacent station
+
+            dec_input = torch.where(corrupt_mask, random_neighbors, dec_input)
+
+        tgt = self._embed_tokens(dec_input, h_dest)
+        memory = H_all.unsqueeze(0).expand(B, -1, -1)
         causal = self._causal_mask(T, device, tgt.dtype)
 
-        out = self.tf_decoder(tgt, memory, tgt_mask=causal)  # (B, T, d)
+        out = self.tf_decoder(tgt, memory, tgt_mask=causal)
         logits = self.out_proj(out)  # (B, T, V)
 
-        # Adjacency mask: at position t, we're "at" dec_input[:, t]
+        # Adjacency mask follows the (possibly corrupted) input positions
         logits = self._apply_adj_mask(logits, dec_input)
 
         return {"station": logits}
