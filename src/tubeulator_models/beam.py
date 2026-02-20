@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
 from .models.decoders import TransformerStationDecoder
@@ -38,7 +37,13 @@ def beam_decode(
 
     if isinstance(dec, TransformerStationDecoder):
         return _beam_transformer_station(
-            dec, h_d, H, origins, dests, beam_width, origins.device,
+            dec,
+            h_d,
+            H,
+            origins,
+            dests,
+            beam_width,
+            origins.device,
         )
     elif mt == "station":
         return _beam_pointer_gru(dec, h_o, h_d, H, beam_width, origins.device, origins)
@@ -53,10 +58,10 @@ def beam_decode(
 
 def _beam_transformer_station(
     dec: TransformerStationDecoder,
-    h_dest: torch.Tensor,       # (B, d)
-    H_all: torch.Tensor,        # (N, d)
-    origins: torch.Tensor,      # (B,)
-    dests: torch.Tensor,        # (B,)
+    h_dest: torch.Tensor,  # (B, d)
+    H_all: torch.Tensor,  # (N, d)
+    origins: torch.Tensor,  # (B,)
+    dests: torch.Tensor,  # (B,)
     beam_width: int,
     device: torch.device,
 ) -> list[list[tuple[torch.Tensor, float]]]:
@@ -76,11 +81,11 @@ def _beam_transformer_station(
     for b in range(B):
         orig = origins[b]
         dest = dests[b]
-        h_d_b = h_dest[b].unsqueeze(0)   # (1, d)
+        h_d_b = h_dest[b].unsqueeze(0)  # (1, d)
 
         # Each beam: (token_tensor_of_length_T, cumulative_log_prob)
         live: list[tuple[torch.Tensor, float]] = [
-            (orig.unsqueeze(0), 0.0)      # start with origin token
+            (orig.unsqueeze(0), 0.0)  # start with origin token
         ]
         finished: list[tuple[torch.Tensor, float]] = []
 
@@ -89,24 +94,24 @@ def _beam_transformer_station(
                 break
 
             n = len(live)
-            seqs = torch.stack([s for s, _ in live])       # (n, T)
+            seqs = torch.stack([s for s, _ in live])  # (n, T)
             scores = [sc for _, sc in live]
             T = seqs.size(1)
 
             # Expand single-example tensors to beam count
-            h_d_exp = h_d_b.expand(n, -1)                 # (n, d)
-            memory = memory_base.expand(n, -1, -1)         # (n, N, d)
+            h_d_exp = h_d_b.expand(n, -1)  # (n, d)
+            memory = memory_base.expand(n, -1, -1)  # (n, N, d)
 
             tgt = dec._embed_tokens(seqs, h_d_exp)
             causal = dec._causal_mask(T, device, tgt.dtype)
 
             out = dec.tf_decoder(tgt, memory, tgt_mask=causal)
-            logits = dec.out_proj(out[:, -1, :])           # (n, V)
+            logits = dec.out_proj(out[:, -1, :])  # (n, V)
 
             # Adjacency mask based on last token in each beam
             logits = dec._apply_adj_mask(logits, seqs[:, -1])
 
-            log_probs = F.log_softmax(logits, dim=-1)      # (n, V)
+            log_probs = F.log_softmax(logits, dim=-1)  # (n, V)
 
             # Expand candidates
             candidates: list[tuple[torch.Tensor, float]] = []
@@ -357,9 +362,7 @@ def _beam_structured(
 
                             cand_h.append(h_next[ki].unsqueeze(0))
                             cand_fb.append(fb)
-                            cand_seqs.append(
-                                seqs[ki] + [ln_tok.item(), dir_tok.item()]
-                            )
+                            cand_seqs.append(seqs[ki] + [ln_tok.item(), dir_tok.item()])
                             cand_lps.append(score)
 
             if len(cand_lps) > beam_width:

@@ -98,7 +98,13 @@ class RouteModel(nn.Module):
 
         if self.model_type == "station":
             return self.decoder(
-                h_o, h_d, H, origins, dests, labels=labels, sampling_p=sampling_p,
+                h_o,
+                h_d,
+                H,
+                origins,
+                dests,
+                labels=labels,
+                sampling_p=sampling_p,
             )
         else:
             return self.decoder(h_o, h_d, labels=labels, sampling_p=sampling_p)
