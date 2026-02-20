@@ -82,8 +82,6 @@ dropout = 0.1
 weight_decay = 1e-4
 
 [profiles.full.model.change]
-dropout = 0.2
-beam_width = 15
 epochs = 150
 
 [profiles.full.model.station]
