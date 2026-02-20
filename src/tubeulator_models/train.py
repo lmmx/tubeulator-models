@@ -15,7 +15,7 @@ from .evaluate import RouteMetrics, compute_metrics
 from .graph_enriched import build_enriched_graph
 from .metrics_log import MetricsLogger
 from .models.combined import RouteModel
-from .topology import build_adj_mask, extract
+from .topology import build_adj_mask, build_line_station_mask, extract
 
 
 __all__ = ["train"]
@@ -241,6 +241,12 @@ def train(cfg: TrainConfig) -> None:
             f"  adjacency mask: {adj.sum().item():,} edges, {n_avg:.1f} avg neighbors"
         )
 
+    if cfg.model_type == "change":
+        ls_mask = build_line_station_mask(topo, ds.stations, ds.lines).to(device)
+        model.decoder.set_line_station_mask(ls_mask)
+        avg_st = ls_mask.float().sum(1).mean().item()
+        rprint(f"  line→station mask: {avg_st:.1f} avg stations per line")
+
     raw_model = model
     model = _try_compile(model)
 
@@ -356,7 +362,15 @@ def train(cfg: TrainConfig) -> None:
                 cfg.beam_eval_interval > 0 and epoch % cfg.beam_eval_interval == 0
             ) or epoch == cfg.epochs
 
-            n_val_batches = (n_val + cfg.batch_size - 1) // cfg.batch_size
+            if run_beam and cfg.beam_eval_sample < 1.0:
+                n_beam_val = max(1, int(n_val * cfg.beam_eval_sample))
+                beam_perm = torch.randperm(n_val, device=device)[:n_beam_val]
+                beam_val_idx = val_idx[beam_perm]
+            else:
+                beam_val_idx = val_idx
+
+            n_beam_eval = beam_val_idx.size(0) if run_beam else n_val
+            n_val_batches = (n_beam_eval + cfg.batch_size - 1) // cfg.batch_size
 
             if run_beam:
                 beam_progress = Progress(
@@ -373,8 +387,9 @@ def train(cfg: TrainConfig) -> None:
                 beam_progress = None
 
             with torch.no_grad():
-                for batch_start in range(0, n_val, cfg.batch_size):
-                    batch_idx = val_idx[batch_start : batch_start + cfg.batch_size]
+                for batch_start in range(0, n_beam_eval, cfg.batch_size):
+                    eval_source = beam_val_idx if run_beam else val_idx
+                    batch_idx = eval_source[batch_start : batch_start + cfg.batch_size]
                     raw_indices, origins, dests, labels = ds.get_batch(batch_idx)
 
                     with torch.amp.autocast("cuda", enabled=use_amp):

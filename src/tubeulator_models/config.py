@@ -45,6 +45,7 @@ class TrainConfig(BaseModel):
     # ── inference ─────────────────────────────────────────────
     beam_width: int
     beam_eval_interval: int
+    beam_eval_sample: float
 
     # ── route enumeration ─────────────────────────────────────
     max_transfers: int
