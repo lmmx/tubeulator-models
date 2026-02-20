@@ -400,31 +400,32 @@ class TransformerStationDecoder(nn.Module):
         device = labels.device
 
         # Decoder input: shift right, prepend origin
-        dec_input = torch.cat([origins.unsqueeze(1), labels[:, :-1]], dim=1)  # (B, T)
+        dec_input_clean = torch.cat(
+            [origins.unsqueeze(1), labels[:, :-1]], dim=1
+        )  # (B, T)
+        dec_input = dec_input_clean
 
         # Token corruption: replace random positions with adjacent stations
         if self.training and sampling_p > 0.0 and self.adj_mask is not None:
             corrupt_mask = torch.rand(B, T, device=device) < sampling_p
             corrupt_mask[:, 0] = False  # never corrupt the origin
 
-            # For each token, pick a random neighbor from adj_mask
-            adj = self.adj_mask[dec_input]  # (B, T, N) boolean
-            # Random scores, zeroed where not adjacent
+            adj = self.adj_mask[dec_input_clean]
             noise = torch.rand(B, T, self.n_stations, device=device)
             noise[~adj] = -1.0
-            random_neighbors = noise.argmax(dim=-1)  # (B, T) random adjacent station
+            random_neighbors = noise.argmax(dim=-1)
 
-            dec_input = torch.where(corrupt_mask, random_neighbors, dec_input)
+            dec_input = torch.where(corrupt_mask, random_neighbors, dec_input_clean)
 
         tgt = self._embed_tokens(dec_input, h_dest)
         memory = H_all.unsqueeze(0).expand(B, -1, -1)
         causal = self._causal_mask(T, device, tgt.dtype)
 
         out = self.tf_decoder(tgt, memory, tgt_mask=causal)
-        logits = self.out_proj(out)  # (B, T, V)
+        logits = self.out_proj(out)
 
-        # Adjacency mask follows the (possibly corrupted) input positions
-        logits = self._apply_adj_mask(logits, dec_input)
+        # Adjacency mask follows CLEAN teacher positions — correct answer always unmasked
+        logits = self._apply_adj_mask(logits, dec_input_clean)
 
         return {"station": logits}
 
