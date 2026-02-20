@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import torch.nn as nn
 
-from .decoders import InterchangeDecoder, LineSeqDecoder, StationSeqDecoder
+from .decoders import (
+    InterchangeDecoder,
+    LineSeqDecoder,
+    StationSeqDecoder,
+    TransformerStationDecoder,
+)
 from .encoder import GATEncoder
 
 
@@ -13,7 +18,8 @@ __all__ = ["RouteModel"]
 _DECODERS = {
     "line": LineSeqDecoder,
     "change": InterchangeDecoder,
-    "station": StationSeqDecoder,
+    "station": TransformerStationDecoder,
+    # To revert to GRU decoder: change the line above to StationSeqDecoder
 }
 
 
@@ -28,6 +34,7 @@ class RouteModel(nn.Module):
         model_type: str,
         max_seq: int,
         dropout: float,
+        n_dec_layers: int = 4,
     ):
         super().__init__()
         if model_type not in _DECODERS:
@@ -40,7 +47,7 @@ class RouteModel(nn.Module):
 
         self.encoder = GATEncoder(
             d_node=4,
-            d_edge=n_lines + 1,  # one-hot line identity + normalised travel time
+            d_edge=n_lines + 1,
             d_model=d_model,
             n_heads=n_heads,
             n_layers=n_enc_layers,
@@ -57,11 +64,23 @@ class RouteModel(nn.Module):
                 max_legs=max_seq,
             )
         elif model_type == "station":
-            self.decoder = StationSeqDecoder(
-                d_model,
-                n_stations,
-                max_len=max_seq,
-            )
+            decoder_cls = _DECODERS["station"]
+            if decoder_cls is TransformerStationDecoder:
+                self.decoder = TransformerStationDecoder(
+                    d_model=d_model,
+                    n_stations=n_stations,
+                    max_len=max_seq,
+                    n_heads=n_heads,
+                    n_dec_layers=n_dec_layers,
+                    dropout=dropout,
+                )
+            else:
+                # GRU fallback
+                self.decoder = StationSeqDecoder(
+                    d_model,
+                    n_stations,
+                    max_len=max_seq,
+                )
 
     def forward(
         self,
@@ -79,7 +98,7 @@ class RouteModel(nn.Module):
 
         if self.model_type == "station":
             return self.decoder(
-                h_o, h_d, H, origins, labels=labels, sampling_p=sampling_p
+                h_o, h_d, H, origins, dests, labels=labels, sampling_p=sampling_p,
             )
         else:
             return self.decoder(h_o, h_d, labels=labels, sampling_p=sampling_p)

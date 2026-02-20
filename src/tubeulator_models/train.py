@@ -151,8 +151,8 @@ def _aggregate_metrics(all_metrics: list[RouteMetrics]) -> RouteMetrics:
 
 def _try_compile(model: nn.Module) -> nn.Module:
     try:
-        compiled = torch.compile(model, mode="reduce-overhead")
-        print("  torch.compile(mode='reduce-overhead') enabled")
+        compiled = torch.compile(model, mode="default")
+        print("  torch.compile(mode='default') enabled")
         return compiled
     except Exception as e:
         print(f"  torch.compile unavailable ({e}), using eager mode")

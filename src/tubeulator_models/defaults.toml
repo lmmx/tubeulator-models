@@ -86,6 +86,6 @@ epochs = 150
 
 [profiles.full.model.station]
 max_seq = 50
-batch_size = 2048
+batch_size = 1024
 lr = 2.8e-4
 beam_width = 20
