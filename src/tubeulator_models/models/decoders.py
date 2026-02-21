@@ -471,3 +471,110 @@ class TransformerStationDecoder(nn.Module):
             logits = torch.cat([logits, pad], dim=1)
 
         return {"station": logits}
+
+
+class HybridStationDecoder(nn.Module):
+    """GRU sequential backbone + Transformer cross-attention to encoder.
+
+    Keeps the GRU's scheduled sampling and soft distributions (beam works),
+    but adds cross-attention for direct access to all station embeddings
+    at every step (better per-token accuracy).
+    """
+
+    MASK_VALUE = -1e4
+
+    def __init__(
+        self,
+        d_model: int,
+        n_stations: int,
+        max_len: int = 40,
+        n_heads: int = 8,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.max_len = max_len
+        self.d_model = d_model
+        self.n_stations = n_stations
+
+        self.init_proj = nn.Linear(2 * d_model, d_model)
+        self.gru = nn.GRUCell(d_model, d_model)
+        self.station_emb = nn.Embedding(n_stations, d_model)
+
+        # Cross-attention: GRU hidden state queries encoder station embeddings
+        self.cross_attn = nn.MultiheadAttention(
+            d_model,
+            n_heads,
+            dropout=dropout,
+            batch_first=True,
+        )
+        self.cross_norm = nn.LayerNorm(d_model)
+
+        # Output projection (replaces pointer mechanism)
+        self.out_proj = nn.Linear(d_model, n_stations)
+
+        self.start_input = nn.Parameter(torch.zeros(1, d_model))
+
+        self.register_buffer("adj_mask", None)
+
+    def set_adj_mask(self, mask: torch.Tensor) -> None:
+        self.adj_mask = mask
+
+    def forward(
+        self,
+        h_origin,
+        h_dest,
+        H_all,
+        origins,
+        dests=None,
+        labels=None,
+        sampling_p: float = 0.0,
+    ):
+        device = h_origin.device
+        B = h_origin.size(0)
+        h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
+
+        # Encoder output as key/value for cross-attention
+        memory = H_all.unsqueeze(0).expand(B, -1, -1)  # (B, N, d)
+
+        if self.training and sampling_p > 0.0:
+            use_own = torch.rand(self.max_len, device=device) < sampling_p
+        else:
+            use_own = torch.zeros(self.max_len, dtype=torch.bool, device=device)
+
+        current = origins
+        all_logits = []
+
+        gru_input = self.start_input.expand(B, -1)
+
+        for step in range(self.max_len):
+            # GRU step
+            h = self.gru(gru_input, h)
+
+            # Cross-attention: query is GRU hidden, keys/values are encoder output
+            query = h.unsqueeze(1)  # (B, 1, d)
+            attended, _ = self.cross_attn(query, memory, memory)  # (B, 1, d)
+            h_out = self.cross_norm(h + attended.squeeze(1))  # (B, d) residual
+
+            # Output logits
+            logits = self.out_proj(h_out)  # (B, V)
+
+            # Adjacency mask
+            if self.adj_mask is not None:
+                mask = self.adj_mask[current]
+                logits = logits.masked_fill(~mask, self.MASK_VALUE)
+
+            all_logits.append(logits)
+
+            own_tok = logits.argmax(-1)
+
+            if labels is not None and step < labels.size(1):
+                teacher_tok = labels[:, step].clamp(min=0)
+                tok = torch.where(use_own[step], own_tok, teacher_tok)
+                current = teacher_tok  # mask follows teacher
+            else:
+                tok = own_tok
+                current = tok
+
+            gru_input = self.station_emb(tok)
+
+        return {"station": torch.stack(all_logits, dim=1)}

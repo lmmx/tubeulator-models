@@ -5,7 +5,7 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F
 
-from .models.decoders import TransformerStationDecoder
+from .models.decoders import HybridStationDecoder, TransformerStationDecoder
 
 
 __all__ = ["beam_decode"]
@@ -45,6 +45,8 @@ def beam_decode(
             beam_width,
             origins.device,
         )
+    elif isinstance(dec, HybridStationDecoder):
+        return _beam_hybrid(dec, h_o, h_d, H, beam_width, origins.device, origins)
     elif mt == "station":
         return _beam_pointer_gru(dec, h_o, h_d, H, beam_width, origins.device, origins)
     else:
@@ -54,6 +56,98 @@ def beam_decode(
 # ══════════════════════════════════════════════════════════════
 #  Transformer station decoder beam search
 # ══════════════════════════════════════════════════════════════
+
+
+def _beam_hybrid(
+    dec: HybridStationDecoder,
+    h_o: torch.Tensor,
+    h_d: torch.Tensor,
+    H_all: torch.Tensor,
+    beam_width: int,
+    device: torch.device,
+    origins: torch.Tensor,
+) -> list[list[tuple[torch.Tensor, float]]]:
+    """Beam search for HybridStationDecoder (GRU + cross-attention)."""
+    B = h_o.size(0)
+    max_len = dec.max_len
+    K = beam_width
+    N = H_all.size(0)
+
+    memory = H_all.unsqueeze(0)  # (1, N, d)
+    h_init = torch.relu(dec.init_proj(torch.cat([h_o, h_d], dim=-1)))
+
+    h = h_init
+    gru_input = dec.start_input.expand(B, -1)
+    cum_lps = torch.zeros(B, 1, device=device)
+    token_seqs = torch.zeros(B, 1, max_len, dtype=torch.long, device=device)
+    current = origins.unsqueeze(1)
+    n_beams = 1
+
+    for step in range(max_len):
+        # GRU step
+        h_next = dec.gru(gru_input, h)
+
+        # Cross-attention
+        BK = h_next.size(0)
+        mem = memory.expand(BK, -1, -1)
+        query = h_next.unsqueeze(1)
+        attended, _ = dec.cross_attn(query, mem, mem)
+        h_out = dec.cross_norm(h_next + attended.squeeze(1))
+
+        # Output logits
+        logits = dec.out_proj(h_out)
+
+        # Adjacency mask
+        if dec.adj_mask is not None:
+            current_flat = current.reshape(-1)
+            mask = dec.adj_mask[current_flat]
+            logits = logits.masked_fill(~mask, dec.MASK_VALUE)
+
+        lp = F.log_softmax(logits, dim=-1)
+        lp = lp.view(B, n_beams, N)
+        h_next = h_next.view(B, n_beams, -1)
+
+        scores = cum_lps.unsqueeze(-1) + lp
+        scores_flat = scores.view(B, -1)
+
+        actual_k = min(K, scores_flat.size(-1))
+        top_scores, top_flat_idx = scores_flat.topk(actual_k, dim=-1)
+
+        beam_idx = top_flat_idx // N
+        tok_idx = top_flat_idx % N
+
+        d_model = h_next.size(-1)
+        h_selected = h_next.gather(1, beam_idx.unsqueeze(-1).expand(-1, -1, d_model))
+
+        tok_flat = tok_idx.reshape(-1)
+        fb = dec.station_emb(tok_flat).view(B, actual_k, -1)
+        h = h_selected.view(B * actual_k, -1)
+        gru_input = fb.view(B * actual_k, -1)
+
+        if step == 0 and n_beams == 1:
+            new_seqs = token_seqs.expand(-1, actual_k, -1).clone()
+        else:
+            new_seqs = token_seqs.gather(
+                1, beam_idx.unsqueeze(-1).expand(-1, -1, max_len)
+            )
+        new_seqs[:, :, step] = tok_idx
+        token_seqs = new_seqs
+
+        current = tok_idx
+        cum_lps = top_scores
+        n_beams = actual_k
+
+    results: list[list[tuple[torch.Tensor, float]]] = []
+    for b in range(B):
+        beams = []
+        for k in range(n_beams):
+            seq = token_seqs[b, k]
+            score = cum_lps[b, k].item()
+            beams.append((seq, score))
+        beams.sort(key=lambda x: x[1], reverse=True)
+        results.append(beams)
+
+    return results
 
 
 def _beam_transformer_station(
@@ -111,7 +205,8 @@ def _beam_transformer_station(
             # Adjacency mask based on last token in each beam
             logits = dec._apply_adj_mask(logits, seqs[:, -1])
 
-            log_probs = F.log_softmax(logits, dim=-1)  # (n, V)
+            temperature = 3.0  # >1 flattens distribution, exposes alternatives
+            log_probs = F.log_softmax(logits / temperature, dim=-1)  # (n, V)
 
             # Expand candidates
             candidates: list[tuple[torch.Tensor, float]] = []

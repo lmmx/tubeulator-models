@@ -21,6 +21,32 @@ from .topology import build_adj_mask, build_line_station_mask, extract
 __all__ = ["train"]
 
 
+def _compute_min_route_loss(
+    logits: dict,
+    all_valid_labels: list[list[torch.Tensor]],
+    label_smoothing: float = 0.0,
+) -> torch.Tensor:
+    """CE loss against whichever valid route fits best per example."""
+    ce = nn.CrossEntropyLoss(ignore_index=PAD, label_smoothing=label_smoothing)
+    station_logits = logits["station"]  # (B, T, V)
+    B = station_logits.size(0)
+    max_len = station_logits.size(1)
+
+    losses = []
+    for b in range(B):
+        pred = station_logits[b]  # (T, V)
+        route_losses = []
+        for label in all_valid_labels[b]:
+            lbl = label[:max_len]
+            if lbl.size(0) < max_len:
+                pad = lbl.new_full((max_len - lbl.size(0),), PAD)
+                lbl = torch.cat([lbl, pad])
+            route_losses.append(ce(pred, lbl))
+        losses.append(torch.stack(route_losses).min())
+
+    return torch.stack(losses).mean()
+
+
 def _compute_loss(
     logits: dict,
     labels: torch.Tensor,
@@ -323,7 +349,7 @@ def train(cfg: TrainConfig) -> None:
 
             for batch_start in range(0, n_train, cfg.batch_size):
                 batch_idx = shuffled_train[batch_start : batch_start + cfg.batch_size]
-                _, origins, dests, labels = ds.get_batch(batch_idx)
+                raw_indices, origins, dests, labels = ds.get_batch(batch_idx)
 
                 with torch.amp.autocast("cuda", enabled=use_amp):
                     logits = model(
@@ -335,12 +361,21 @@ def train(cfg: TrainConfig) -> None:
                         labels=labels,
                         sampling_p=cfg.scheduled_sampling,
                     )
-                    loss = _compute_loss(
-                        logits,
-                        labels,
-                        cfg.model_type,
-                        label_smoothing=cfg.label_smoothing,
-                    )
+
+                    if cfg.model_type == "station":
+                        all_valid = ds.get_all_labels_batch(raw_indices)
+                        loss = _compute_min_route_loss(
+                            logits,
+                            all_valid,
+                            label_smoothing=cfg.label_smoothing,
+                        )
+                    else:
+                        loss = _compute_loss(
+                            logits,
+                            labels,
+                            cfg.model_type,
+                            label_smoothing=cfg.label_smoothing,
+                        )
 
                 optimizer.zero_grad(set_to_none=True)
                 scaler.scale(loss).backward()

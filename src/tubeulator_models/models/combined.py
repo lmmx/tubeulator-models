@@ -5,6 +5,7 @@ from __future__ import annotations
 import torch.nn as nn
 
 from .decoders import (
+    HybridStationDecoder,
     InterchangeDecoder,
     LineSeqDecoder,
     StationSeqDecoder,
@@ -18,7 +19,7 @@ __all__ = ["RouteModel"]
 _DECODERS = {
     "line": LineSeqDecoder,
     "change": InterchangeDecoder,
-    "station": TransformerStationDecoder,
+    "station": HybridStationDecoder,
     # To revert to GRU decoder: change the line above to StationSeqDecoder
 }
 
@@ -65,7 +66,15 @@ class RouteModel(nn.Module):
             )
         elif model_type == "station":
             decoder_cls = _DECODERS["station"]
-            if decoder_cls is TransformerStationDecoder:
+            if decoder_cls is HybridStationDecoder:
+                self.decoder = HybridStationDecoder(
+                    d_model=d_model,
+                    n_stations=n_stations,
+                    max_len=max_seq,
+                    n_heads=n_heads,
+                    dropout=dropout,
+                )
+            elif decoder_cls is TransformerStationDecoder:
                 self.decoder = TransformerStationDecoder(
                     d_model=d_model,
                     n_stations=n_stations,
