@@ -90,9 +90,11 @@ def _beam_hybrid(
         # Cross-attention
         BK = h_next.size(0)
         mem = memory.expand(BK, -1, -1)
-        query = h_next.unsqueeze(1)
-        attended, _ = dec.cross_attn(query, mem, mem)
-        h_out = dec.cross_norm(h_next + attended.squeeze(1))
+        h_out = h_next.unsqueeze(1)
+        for attn, norm in zip(dec.cross_layers, dec.cross_norms):
+            attended, _ = attn(h_out, mem, mem)
+            h_out = norm(h_out + attended)
+        h_out = h_out.squeeze(1)
 
         # Output logits
         logits = dec.out_proj(h_out)

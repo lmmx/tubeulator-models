@@ -90,3 +90,5 @@ max_seq = 50
 batch_size = 256
 lr = 2.8e-4
 beam_width = 20
+epochs = 100
+beam_eval_interval = 25

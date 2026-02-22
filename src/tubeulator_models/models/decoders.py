@@ -501,13 +501,16 @@ class HybridStationDecoder(nn.Module):
         self.station_emb = nn.Embedding(n_stations, d_model)
 
         # Cross-attention: GRU hidden state queries encoder station embeddings
-        self.cross_attn = nn.MultiheadAttention(
-            d_model,
-            n_heads,
-            dropout=dropout,
-            batch_first=True,
-        )
-        self.cross_norm = nn.LayerNorm(d_model)
+        n_cross_layers = 2
+        self.cross_layers = nn.ModuleList()
+        self.cross_norms = nn.ModuleList()
+        for _ in range(n_cross_layers):
+            self.cross_layers.append(
+                nn.MultiheadAttention(
+                    d_model, n_heads, dropout=dropout, batch_first=True
+                )
+            )
+            self.cross_norms.append(nn.LayerNorm(d_model))
 
         # Output projection (replaces pointer mechanism)
         self.out_proj = nn.Linear(d_model, n_stations)
@@ -551,9 +554,11 @@ class HybridStationDecoder(nn.Module):
             h = self.gru(gru_input, h)
 
             # Cross-attention: query is GRU hidden, keys/values are encoder output
-            query = h.unsqueeze(1)  # (B, 1, d)
-            attended, _ = self.cross_attn(query, memory, memory)  # (B, 1, d)
-            h_out = self.cross_norm(h + attended.squeeze(1))  # (B, d) residual
+            h_out = h.unsqueeze(1)
+            for attn, norm in zip(self.cross_layers, self.cross_norms):
+                attended, _ = attn(h_out, memory, memory)
+                h_out = norm(h_out + attended)
+            h_out = h_out.squeeze(1)
 
             # Output logits
             logits = self.out_proj(h_out)  # (B, V)
