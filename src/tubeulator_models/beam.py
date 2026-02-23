@@ -21,36 +21,28 @@ def beam_decode(
     dests: torch.Tensor,
     beam_width: int = 5,
 ) -> list[list[tuple[torch.Tensor, float]]]:
-    """
-    Beam search decoding.  Returns one list per example in the batch,
-    each containing (sequence_tensor, log_prob) tuples sorted best-first.
-
-    Dispatches to the appropriate implementation based on decoder type.
-    """
     model.eval()
-    H = model.encoder(graph_x, graph_edge_index, graph_edge_attr)
-    h_o = H[origins]
-    h_d = H[dests]
+    device = origins.device
+    use_amp = device.type == "cuda"
 
-    mt = model.model_type
-    dec = model.decoder
+    with torch.amp.autocast("cuda", enabled=use_amp):
+        H = model.encoder(graph_x, graph_edge_index, graph_edge_attr)
+        h_o = H[origins]
+        h_d = H[dests]
 
-    if isinstance(dec, TransformerStationDecoder):
-        return _beam_transformer_station(
-            dec,
-            h_d,
-            H,
-            origins,
-            dests,
-            beam_width,
-            origins.device,
-        )
-    elif isinstance(dec, HybridStationDecoder):
-        return _beam_hybrid(dec, h_o, h_d, H, beam_width, origins.device, origins)
-    elif mt == "station":
-        return _beam_pointer_gru(dec, h_o, h_d, H, beam_width, origins.device, origins)
-    else:
-        return _beam_structured(dec, h_o, h_d, mt, beam_width, origins.device)
+        mt = model.model_type
+        dec = model.decoder
+
+        if isinstance(dec, TransformerStationDecoder):
+            return _beam_transformer_station(
+                dec, h_d, H, origins, dests, beam_width, device
+            )
+        elif isinstance(dec, HybridStationDecoder):
+            return _beam_hybrid(dec, h_o, h_d, H, beam_width, device, origins)
+        elif mt == "station":
+            return _beam_pointer_gru(dec, h_o, h_d, H, beam_width, device, origins)
+        else:
+            return _beam_structured(dec, h_o, h_d, mt, beam_width, device)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -154,96 +146,96 @@ def _beam_hybrid(
 
 def _beam_transformer_station(
     dec: TransformerStationDecoder,
-    h_dest: torch.Tensor,  # (B, d)
-    H_all: torch.Tensor,  # (N, d)
-    origins: torch.Tensor,  # (B,)
-    dests: torch.Tensor,  # (B,)
+    h_dest: torch.Tensor,
+    H_all: torch.Tensor,
+    origins: torch.Tensor,
+    dests: torch.Tensor,
     beam_width: int,
     device: torch.device,
 ) -> list[list[tuple[torch.Tensor, float]]]:
-    """
-    Beam search for TransformerStationDecoder.
-
-    All live beams at a given step have identical token length, so they
-    batch cleanly without padding.  With adjacency masking the effective
-    branching factor is 3–4, making beam_width=20 near-exhaustive.
-    """
+    """Fully batched beam search — all B examples × K beams in one forward pass per step."""
     B = origins.size(0)
     K = beam_width
-    memory_base = H_all.unsqueeze(0)  # (1, N, d)
+    N = dec.n_stations
+    max_len = dec.max_len
 
-    all_results: list[list[tuple[torch.Tensor, float]]] = []
+    # Token buffer: (B, K, max_len+1), position 0 = origin
+    tokens = torch.zeros(B, K, max_len + 1, dtype=torch.long, device=device)
+    tokens[:, :, 0] = origins.unsqueeze(1)
 
+    cum_scores = torch.full((B, K), -1e9, device=device)
+    cum_scores[:, 0] = 0.0  # only first beam active at start
+
+    # Finished beams stored separately so they can't be evicted by live beams
+    fin_tokens = torch.zeros(B, K, max_len + 1, dtype=torch.long, device=device)
+    fin_scores = torch.full((B, K), -1e9, device=device)
+    fin_lengths = torch.zeros(B, K, dtype=torch.long, device=device)
+
+    temperature = 3.0
+
+    for step in range(max_len):
+        T = step + 1
+
+        flat_tokens = tokens[:, :, :T].reshape(B * K, T)
+        h_d_flat = h_dest.unsqueeze(1).expand(-1, K, -1).reshape(B * K, -1)
+        mem = H_all.unsqueeze(0).expand(B * K, -1, -1)
+
+        tgt = dec._embed_tokens(flat_tokens, h_d_flat)
+        causal = dec._causal_mask(T, device, tgt.dtype)
+        out = dec.tf_decoder(tgt, mem, tgt_mask=causal)
+        logits = dec.out_proj(out[:, -1, :]).view(B, K, N)
+
+        # Adjacency mask
+        last_tok = tokens[:, :, step]
+        if dec.adj_mask is not None:
+            adj = dec.adj_mask[last_tok.reshape(-1)].view(B, K, N)
+            logits = logits.masked_fill(~adj, dec.MASK_VALUE)
+
+        lp = F.log_softmax(logits / temperature, dim=-1)
+        scores = cum_scores.unsqueeze(-1) + lp  # (B, K, N)
+        scores_flat = scores.view(B, K * N)
+
+        top_scores, top_flat = scores_flat.topk(K, dim=-1)
+        beam_idx = top_flat // N
+        tok_idx = top_flat % N
+
+        # Reorder parent sequences and append new token
+        prev = tokens[:, :, :T].gather(1, beam_idx.unsqueeze(-1).expand(-1, -1, T))
+        tokens[:, :, :T] = prev
+        tokens[:, :, T] = tok_idx
+        cum_scores = top_scores
+
+        # Store newly finished beams (reached destination)
+        reached = tok_idx == dests.unsqueeze(1)  # (B, K)
+        if reached.any():
+            for b in range(B):
+                for k in range(K):
+                    if reached[b, k]:
+                        score = cum_scores[b, k].item()
+                        worst = fin_scores[b].argmin().item()
+                        if score > fin_scores[b, worst].item():
+                            fin_scores[b, worst] = score
+                            fin_lengths[b, worst] = T + 1
+                            fin_tokens[b, worst, : T + 1] = tokens[b, k, : T + 1]
+
+        # Early exit: all examples have K finished beams beating all live beams
+        if (fin_scores.min(dim=1).values > cum_scores.max(dim=1).values).all():
+            break
+
+    # Merge finished + live, sort best-first
+    results: list[list[tuple[torch.Tensor, float]]] = []
     for b in range(B):
-        orig = origins[b]
-        dest = dests[b]
-        h_d_b = h_dest[b].unsqueeze(0)  # (1, d)
+        beams: list[tuple[torch.Tensor, float]] = []
+        for k in range(K):
+            if fin_scores[b, k] > -1e8:
+                L = fin_lengths[b, k].item()
+                beams.append((fin_tokens[b, k, :L].clone(), fin_scores[b, k].item()))
+        for k in range(K):
+            beams.append((tokens[b, k, : max_len + 1].clone(), cum_scores[b, k].item()))
+        beams.sort(key=lambda x: x[1], reverse=True)
+        results.append(beams[:K])
 
-        # Each beam: (token_tensor_of_length_T, cumulative_log_prob)
-        live: list[tuple[torch.Tensor, float]] = [
-            (orig.unsqueeze(0), 0.0)  # start with origin token
-        ]
-        finished: list[tuple[torch.Tensor, float]] = []
-
-        for step in range(dec.max_len - 1):
-            if not live:
-                break
-
-            n = len(live)
-            seqs = torch.stack([s for s, _ in live])  # (n, T)
-            scores = [sc for _, sc in live]
-            T = seqs.size(1)
-
-            # Expand single-example tensors to beam count
-            h_d_exp = h_d_b.expand(n, -1)  # (n, d)
-            memory = memory_base.expand(n, -1, -1)  # (n, N, d)
-
-            tgt = dec._embed_tokens(seqs, h_d_exp)
-            causal = dec._causal_mask(T, device, tgt.dtype)
-
-            out = dec.tf_decoder(tgt, memory, tgt_mask=causal)
-            logits = dec.out_proj(out[:, -1, :])  # (n, V)
-
-            # Adjacency mask based on last token in each beam
-            logits = dec._apply_adj_mask(logits, seqs[:, -1])
-
-            temperature = 3.0  # >1 flattens distribution, exposes alternatives
-            log_probs = F.log_softmax(logits / temperature, dim=-1)  # (n, V)
-
-            # Expand candidates
-            candidates: list[tuple[torch.Tensor, float]] = []
-
-            for i in range(n):
-                # Only consider unmasked tokens
-                valid_count = (logits[i] > dec.MASK_VALUE + 1).sum().item()
-                topk_k = min(K, max(1, int(valid_count)))
-                topk_lp, topk_idx = log_probs[i].topk(topk_k)
-
-                for j in range(topk_lp.size(0)):
-                    tok = topk_idx[j]
-                    new_seq = torch.cat([live[i][0], tok.unsqueeze(0)])
-                    new_score = scores[i] + topk_lp[j].item()
-
-                    if tok.item() == dest.item() and new_seq.size(0) > 1:
-                        finished.append((new_seq, new_score))
-                    else:
-                        candidates.append((new_seq, new_score))
-
-            # Prune to top K
-            candidates.sort(key=lambda x: x[1], reverse=True)
-            live = candidates[:K]
-
-            # Early exit: enough finished beams
-            finished.sort(key=lambda x: x[1], reverse=True)
-            finished = finished[:K]
-            if len(finished) >= K:
-                break
-
-        merged = finished + live
-        merged.sort(key=lambda x: x[1], reverse=True)
-        all_results.append(merged[:K])
-
-    return all_results
+    return results
 
 
 # ══════════════════════════════════════════════════════════════

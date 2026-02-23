@@ -26,25 +26,39 @@ def _compute_min_route_loss(
     all_valid_labels: list[list[torch.Tensor]],
     label_smoothing: float = 0.0,
 ) -> torch.Tensor:
-    """CE loss against whichever valid route fits best per example."""
-    ce = nn.CrossEntropyLoss(ignore_index=PAD, label_smoothing=label_smoothing)
+    """CE loss against whichever valid route fits best — single kernel call."""
     station_logits = logits["station"]  # (B, T, V)
-    B = station_logits.size(0)
-    max_len = station_logits.size(1)
+    B, T, V = station_logits.shape
+    device = station_logits.device
 
-    losses = []
+    max_routes = max(len(r) for r in all_valid_labels)
+
+    # Build (B, R, T) label tensor — one fused allocation
+    padded = torch.full((B, max_routes, T), PAD, dtype=torch.long, device=device)
+    route_valid = torch.zeros(B, max_routes, dtype=torch.bool, device=device)
+
     for b in range(B):
-        pred = station_logits[b]  # (T, V)
-        route_losses = []
-        for label in all_valid_labels[b]:
-            lbl = label[:max_len]
-            if lbl.size(0) < max_len:
-                pad = lbl.new_full((max_len - lbl.size(0),), PAD)
-                lbl = torch.cat([lbl, pad])
-            route_losses.append(ce(pred, lbl))
-        losses.append(torch.stack(route_losses).min())
+        for r, label in enumerate(all_valid_labels[b]):
+            L = min(label.size(0), T)
+            padded[b, r, :L] = label[:L]
+            route_valid[b, r] = True
 
-    return torch.stack(losses).mean()
+    # Single CE call over all (B × R × T) tokens
+    logits_exp = station_logits.unsqueeze(1).expand(-1, max_routes, -1, -1)
+    ce = nn.CrossEntropyLoss(
+        ignore_index=PAD, reduction="none", label_smoothing=label_smoothing
+    )
+    per_token = ce(
+        logits_exp.reshape(-1, V),
+        padded.reshape(-1),
+    ).view(B, max_routes, T)
+
+    # Mean over valid tokens per route, then min over routes
+    n_tokens = (padded != PAD).sum(dim=-1).float().clamp(min=1)  # (B, R)
+    route_loss = per_token.sum(dim=-1) / n_tokens  # (B, R)
+    route_loss[~route_valid] = float("inf")
+
+    return route_loss.min(dim=1).values.mean()
 
 
 def _compute_loss(
