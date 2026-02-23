@@ -1,4 +1,4 @@
-"""Three decoder heads: line-seq (A), interchange (B), station-seq (C)."""
+"""Decoder heads: line-seq (A), interchange (B), station-seq GRU (C), station-seq Transformer (D)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,12 @@ import torch
 import torch.nn as nn
 
 
-__all__ = ["LineSeqDecoder", "InterchangeDecoder", "StationSeqDecoder"]
+__all__ = [
+    "LineSeqDecoder",
+    "InterchangeDecoder",
+    "StationSeqDecoder",
+    "TransformerStationDecoder",
+]
 
 
 class LineSeqDecoder(nn.Module):
@@ -77,7 +82,6 @@ class LineSeqDecoder(nn.Module):
                 ln_tok = own_ln
                 dir_tok = own_dir
 
-            # feedback becomes next step's GRU input (not residual-added to h)
             gru_input = torch.cat(
                 [self.line_emb(ln_tok), self.dir_emb(dir_tok)],
                 dim=-1,
@@ -156,18 +160,14 @@ class InterchangeDecoder(nn.Module):
                 teacher_st = labels[:, step * 3 + 2].clamp(min=0)
                 ln_tok = torch.where(use_own[step], own_ln, teacher_ln)
                 dir_tok = torch.where(use_own[step], own_dir, teacher_dir)
-                # mask follows teacher's line during training (same principle
-                # as adjacency masking: teacher sequence is always valid, so
-                # the correct station is always unmasked)
                 mask_ln = teacher_ln
             else:
                 ln_tok = own_ln
                 dir_tok = own_dir
                 mask_ln = own_ln
 
-            # constrain station head to stations on the selected line
             if self.line_station_mask is not None:
-                line_mask = self.line_station_mask[mask_ln]  # (B, n_stations)
+                line_mask = self.line_station_mask[mask_ln]
                 st_logits = st_logits.masked_fill(~line_mask, -1e4)
 
             all_ln.append(ln_logits)
@@ -199,9 +199,8 @@ class InterchangeDecoder(nn.Module):
 
 class StationSeqDecoder(nn.Module):
     """
-    Model C — predicts full station sequence autoregressively.
-    Uses a pointer-style mechanism with adjacency masking: at each step,
-    only stations adjacent to the current station are valid candidates.
+    Model C — GRU pointer decoder for full station sequence.
+    Kept for comparison; TransformerStationDecoder is the replacement.
     """
 
     def __init__(self, d_model: int, n_stations: int, max_len: int = 40):
@@ -219,7 +218,6 @@ class StationSeqDecoder(nn.Module):
 
         self.start_input = nn.Parameter(torch.zeros(1, d_model))
 
-        # (N, N) boolean mask, set via set_adj_mask before training
         self.register_buffer("adj_mask", None)
 
     def set_adj_mask(self, mask: torch.Tensor) -> None:
@@ -231,6 +229,7 @@ class StationSeqDecoder(nn.Module):
         h_dest,
         H_all,
         origins,
+        dests=None,
         labels=None,
         sampling_p: float = 0.0,
     ):
@@ -238,14 +237,14 @@ class StationSeqDecoder(nn.Module):
         B = h_origin.size(0)
         h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
 
-        keys = self.key_proj(H_all)  # (N, d)
+        keys = self.key_proj(H_all)
 
         if self.training and sampling_p > 0.0:
             use_own = torch.rand(self.max_len, device=device) < sampling_p
         else:
             use_own = torch.zeros(self.max_len, dtype=torch.bool, device=device)
 
-        current = origins  # (B,)
+        current = origins
         all_logits = []
 
         gru_input = self.start_input.expand(B, -1)
@@ -257,8 +256,7 @@ class StationSeqDecoder(nn.Module):
 
             if self.adj_mask is not None:
                 mask = self.adj_mask[current]
-                fill_val = -1e4
-                logits = logits.masked_fill(~mask, fill_val)
+                logits = logits.masked_fill(~mask, -1e4)
 
             all_logits.append(logits)
 
@@ -267,7 +265,317 @@ class StationSeqDecoder(nn.Module):
             if labels is not None and step < labels.size(1):
                 teacher_tok = labels[:, step].clamp(min=0)
                 tok = torch.where(use_own[step], own_tok, teacher_tok)
-                current = teacher_tok  # always follow teacher for masking
+                current = teacher_tok
+            else:
+                tok = own_tok
+                current = tok
+
+            gru_input = self.station_emb(tok)
+
+        return {"station": torch.stack(all_logits, dim=1)}
+
+
+class TransformerStationDecoder(nn.Module):
+    """
+    Model D — Transformer decoder for full station sequence prediction.
+
+    Replaces the GRU pointer decoder.  Cross-attends to the full set of
+    GATv2 encoder station embeddings; self-attends over the autoregressive
+    station sequence with causal masking.  Adjacency mask constrains output
+    logits identically to the GRU version.
+    """
+
+    MASK_VALUE = -1e4
+
+    def __init__(
+        self,
+        d_model: int,
+        n_stations: int,
+        max_len: int = 50,
+        n_heads: int = 8,
+        n_dec_layers: int = 4,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.d_model = d_model
+        self.n_stations = n_stations
+        self.max_len = max_len
+
+        # Token, positional, and destination embeddings
+        self.station_emb = nn.Embedding(n_stations, d_model)
+        self.pos_emb = nn.Embedding(max_len, d_model)
+        self.dest_proj = nn.Linear(d_model, d_model, bias=False)
+
+        # Transformer decoder: cross-attends to encoder graph embeddings
+        layer = nn.TransformerDecoderLayer(
+            d_model=d_model,
+            nhead=n_heads,
+            dim_feedforward=4 * d_model,
+            dropout=dropout,
+            batch_first=True,
+            norm_first=True,
+        )
+        self.tf_decoder = nn.TransformerDecoder(layer, num_layers=n_dec_layers)
+
+        # Output projection to station vocabulary
+        self.out_proj = nn.Linear(d_model, n_stations)
+
+        # (N, N) boolean adjacency mask, set via set_adj_mask before training
+        self.register_buffer("adj_mask", None)
+
+    def set_adj_mask(self, adj: torch.Tensor) -> None:
+        self.adj_mask = adj
+
+    # ── internal helpers ──────────────────────────────────────
+
+    def _embed_tokens(
+        self,
+        tokens: torch.Tensor,  # (B, T) station indices
+        h_dest: torch.Tensor,  # (B, d) destination embedding from encoder
+    ) -> torch.Tensor:
+        """Station embedding + positional embedding + destination bias → (B, T, d)."""
+        B, T = tokens.shape
+        tok = self.station_emb(tokens)  # (B, T, d)
+        pos = self.pos_emb(torch.arange(T, device=tokens.device))  # (T, d)
+        dst = self.dest_proj(h_dest)  # (B, d)
+        return tok + pos.unsqueeze(0) + dst.unsqueeze(1)
+
+    def _causal_mask(
+        self, T: int, device: torch.device, dtype: torch.dtype
+    ) -> torch.Tensor:
+        """(T, T) upper-triangular mask for causal self-attention."""
+        mask = nn.Transformer.generate_square_subsequent_mask(T, device=device)
+        return mask.to(dtype=dtype)
+
+    def _apply_adj_mask(
+        self,
+        logits: torch.Tensor,  # (B, T, V) or (B, V)
+        current_stations: torch.Tensor,  # (B, T) or (B,) station indices
+    ) -> torch.Tensor:
+        if self.adj_mask is None:
+            return logits
+        adj_rows = self.adj_mask[current_stations]  # same shape as logits
+        return logits.masked_fill(~adj_rows, self.MASK_VALUE)
+
+    # ── forward ───────────────────────────────────────────────
+
+    def forward(
+        self,
+        h_origin: torch.Tensor,
+        h_dest: torch.Tensor,
+        H_all: torch.Tensor,
+        origins: torch.Tensor,
+        dests: torch.Tensor,
+        labels: torch.Tensor | None = None,
+        sampling_p: float = 0.0,
+    ) -> dict[str, torch.Tensor]:
+        if labels is not None:
+            return self._forward_teacher_forced(
+                h_dest,
+                H_all,
+                origins,
+                labels,
+                sampling_p,
+            )
+        return self._forward_greedy(h_dest, H_all, origins, dests)
+
+    def _forward_teacher_forced(
+        self,
+        h_dest: torch.Tensor,
+        H_all: torch.Tensor,
+        origins: torch.Tensor,
+        labels: torch.Tensor,
+        sampling_p: float = 0.0,
+    ) -> dict[str, torch.Tensor]:
+        """Parallel teacher-forced forward with optional token corruption.
+
+        With probability sampling_p, each teacher input token is replaced
+        with a random adjacent station — teaching the model to recover
+        from plausible errors without sacrificing parallel computation.
+        """
+        if labels.size(1) > self.max_len:
+            labels = labels[:, : self.max_len]
+
+        B, T = labels.shape
+        device = labels.device
+
+        # Decoder input: shift right, prepend origin
+        dec_input_clean = torch.cat(
+            [origins.unsqueeze(1), labels[:, :-1]], dim=1
+        )  # (B, T)
+        dec_input = dec_input_clean
+
+        # Token corruption: replace random positions with adjacent stations
+        if self.training and sampling_p > 0.0 and self.adj_mask is not None:
+            corrupt_mask = torch.rand(B, T, device=device) < sampling_p
+            corrupt_mask[:, 0] = False  # never corrupt the origin
+
+            adj = self.adj_mask[dec_input_clean]
+            noise = torch.rand(B, T, self.n_stations, device=device)
+            noise[~adj] = -1.0
+            random_neighbors = noise.argmax(dim=-1)
+
+            dec_input = torch.where(corrupt_mask, random_neighbors, dec_input_clean)
+
+        tgt = self._embed_tokens(dec_input, h_dest)
+        memory = H_all.unsqueeze(0).expand(B, -1, -1)
+        causal = self._causal_mask(T, device, tgt.dtype)
+
+        out = self.tf_decoder(tgt, memory, tgt_mask=causal)
+        logits = self.out_proj(out)
+
+        # Adjacency mask follows CLEAN teacher positions — correct answer always unmasked
+        logits = self._apply_adj_mask(logits, dec_input_clean)
+
+        return {"station": logits}
+
+    def _forward_greedy(
+        self,
+        h_dest: torch.Tensor,
+        H_all: torch.Tensor,
+        origins: torch.Tensor,
+        dests: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        """Autoregressive greedy decode (used when labels=None during eval)."""
+        B = origins.size(0)
+        device = origins.device
+        memory = H_all.unsqueeze(0).expand(B, -1, -1)  # (B, N, d)
+
+        tokens = origins.unsqueeze(1)  # (B, 1)
+        all_logits = []
+
+        for step in range(self.max_len):
+            T = tokens.size(1)
+            tgt = self._embed_tokens(tokens, h_dest)
+            causal = self._causal_mask(T, device, tgt.dtype)
+
+            out = self.tf_decoder(tgt, memory, tgt_mask=causal)
+            step_logits = self.out_proj(out[:, -1, :])  # (B, V)
+            step_logits = self._apply_adj_mask(step_logits, tokens[:, -1])
+            all_logits.append(step_logits.unsqueeze(1))
+
+            nxt = step_logits.argmax(-1, keepdim=True)  # (B, 1)
+            tokens = torch.cat([tokens, nxt], dim=1)
+
+            if (nxt.squeeze(-1) == dests).all():
+                break
+
+        logits = torch.cat(all_logits, dim=1)  # (B, steps, V)
+
+        # Pad to max_len for consistent shape downstream
+        if logits.size(1) < self.max_len:
+            pad = logits.new_full(
+                (B, self.max_len - logits.size(1), self.n_stations),
+                self.MASK_VALUE,
+            )
+            logits = torch.cat([logits, pad], dim=1)
+
+        return {"station": logits}
+
+
+class HybridStationDecoder(nn.Module):
+    """GRU sequential backbone + Transformer cross-attention to encoder.
+
+    Keeps the GRU's scheduled sampling and soft distributions (beam works),
+    but adds cross-attention for direct access to all station embeddings
+    at every step (better per-token accuracy).
+    """
+
+    MASK_VALUE = -1e4
+
+    def __init__(
+        self,
+        d_model: int,
+        n_stations: int,
+        max_len: int = 40,
+        n_heads: int = 8,
+        dropout: float = 0.1,
+    ):
+        super().__init__()
+        self.max_len = max_len
+        self.d_model = d_model
+        self.n_stations = n_stations
+
+        self.init_proj = nn.Linear(2 * d_model, d_model)
+        self.gru = nn.GRUCell(d_model, d_model)
+        self.station_emb = nn.Embedding(n_stations, d_model)
+
+        # Cross-attention: GRU hidden state queries encoder station embeddings
+        n_cross_layers = 2
+        self.cross_layers = nn.ModuleList()
+        self.cross_norms = nn.ModuleList()
+        for _ in range(n_cross_layers):
+            self.cross_layers.append(
+                nn.MultiheadAttention(
+                    d_model, n_heads, dropout=dropout, batch_first=True
+                )
+            )
+            self.cross_norms.append(nn.LayerNorm(d_model))
+
+        # Output projection (replaces pointer mechanism)
+        self.out_proj = nn.Linear(d_model, n_stations)
+
+        self.start_input = nn.Parameter(torch.zeros(1, d_model))
+
+        self.register_buffer("adj_mask", None)
+
+    def set_adj_mask(self, mask: torch.Tensor) -> None:
+        self.adj_mask = mask
+
+    def forward(
+        self,
+        h_origin,
+        h_dest,
+        H_all,
+        origins,
+        dests=None,
+        labels=None,
+        sampling_p: float = 0.0,
+    ):
+        device = h_origin.device
+        B = h_origin.size(0)
+        h = torch.relu(self.init_proj(torch.cat([h_origin, h_dest], dim=-1)))
+
+        # Encoder output as key/value for cross-attention
+        memory = H_all.unsqueeze(0).expand(B, -1, -1)  # (B, N, d)
+
+        if self.training and sampling_p > 0.0:
+            use_own = torch.rand(self.max_len, device=device) < sampling_p
+        else:
+            use_own = torch.zeros(self.max_len, dtype=torch.bool, device=device)
+
+        current = origins
+        all_logits = []
+
+        gru_input = self.start_input.expand(B, -1)
+
+        for step in range(self.max_len):
+            # GRU step
+            h = self.gru(gru_input, h)
+
+            # Cross-attention: query is GRU hidden, keys/values are encoder output
+            h_out = h.unsqueeze(1)
+            for attn, norm in zip(self.cross_layers, self.cross_norms):
+                attended, _ = attn(h_out, memory, memory)
+                h_out = norm(h_out + attended)
+            h_out = h_out.squeeze(1)
+
+            # Output logits
+            logits = self.out_proj(h_out)  # (B, V)
+
+            # Adjacency mask
+            if self.adj_mask is not None:
+                mask = self.adj_mask[current]
+                logits = logits.masked_fill(~mask, self.MASK_VALUE)
+
+            all_logits.append(logits)
+
+            own_tok = logits.argmax(-1)
+
+            if labels is not None and step < labels.size(1):
+                teacher_tok = labels[:, step].clamp(min=0)
+                tok = torch.where(use_own[step], own_tok, teacher_tok)
+                current = teacher_tok  # mask follows teacher
             else:
                 tok = own_tok
                 current = tok

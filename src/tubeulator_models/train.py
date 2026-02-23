@@ -21,6 +21,46 @@ from .topology import build_adj_mask, build_line_station_mask, extract
 __all__ = ["train"]
 
 
+def _compute_min_route_loss(
+    logits: dict,
+    all_valid_labels: list[list[torch.Tensor]],
+    label_smoothing: float = 0.0,
+) -> torch.Tensor:
+    """CE loss against whichever valid route fits best — single kernel call."""
+    station_logits = logits["station"]  # (B, T, V)
+    B, T, V = station_logits.shape
+    device = station_logits.device
+
+    max_routes = max(len(r) for r in all_valid_labels)
+
+    # Build (B, R, T) label tensor — one fused allocation
+    padded = torch.full((B, max_routes, T), PAD, dtype=torch.long, device=device)
+    route_valid = torch.zeros(B, max_routes, dtype=torch.bool, device=device)
+
+    for b in range(B):
+        for r, label in enumerate(all_valid_labels[b]):
+            L = min(label.size(0), T)
+            padded[b, r, :L] = label[:L]
+            route_valid[b, r] = True
+
+    # Single CE call over all (B × R × T) tokens
+    logits_exp = station_logits.unsqueeze(1).expand(-1, max_routes, -1, -1)
+    ce = nn.CrossEntropyLoss(
+        ignore_index=PAD, reduction="none", label_smoothing=label_smoothing
+    )
+    per_token = ce(
+        logits_exp.reshape(-1, V),
+        padded.reshape(-1),
+    ).view(B, max_routes, T)
+
+    # Mean over valid tokens per route, then min over routes
+    n_tokens = (padded != PAD).sum(dim=-1).float().clamp(min=1)  # (B, R)
+    route_loss = per_token.sum(dim=-1) / n_tokens  # (B, R)
+    route_loss[~route_valid] = float("inf")
+
+    return route_loss.min(dim=1).values.mean()
+
+
 def _compute_loss(
     logits: dict,
     labels: torch.Tensor,
@@ -151,8 +191,8 @@ def _aggregate_metrics(all_metrics: list[RouteMetrics]) -> RouteMetrics:
 
 def _try_compile(model: nn.Module) -> nn.Module:
     try:
-        compiled = torch.compile(model, mode="reduce-overhead")
-        print("  torch.compile(mode='reduce-overhead') enabled")
+        compiled = torch.compile(model, mode="default")
+        print("  torch.compile(mode='default') enabled")
         return compiled
     except Exception as e:
         print(f"  torch.compile unavailable ({e}), using eager mode")
@@ -323,7 +363,7 @@ def train(cfg: TrainConfig) -> None:
 
             for batch_start in range(0, n_train, cfg.batch_size):
                 batch_idx = shuffled_train[batch_start : batch_start + cfg.batch_size]
-                _, origins, dests, labels = ds.get_batch(batch_idx)
+                raw_indices, origins, dests, labels = ds.get_batch(batch_idx)
 
                 with torch.amp.autocast("cuda", enabled=use_amp):
                     logits = model(
@@ -335,12 +375,21 @@ def train(cfg: TrainConfig) -> None:
                         labels=labels,
                         sampling_p=cfg.scheduled_sampling,
                     )
-                    loss = _compute_loss(
-                        logits,
-                        labels,
-                        cfg.model_type,
-                        label_smoothing=cfg.label_smoothing,
-                    )
+
+                    if cfg.model_type == "station":
+                        all_valid = ds.get_all_labels_batch(raw_indices)
+                        loss = _compute_min_route_loss(
+                            logits,
+                            all_valid,
+                            label_smoothing=cfg.label_smoothing,
+                        )
+                    else:
+                        loss = _compute_loss(
+                            logits,
+                            labels,
+                            cfg.model_type,
+                            label_smoothing=cfg.label_smoothing,
+                        )
 
                 optimizer.zero_grad(set_to_none=True)
                 scaler.scale(loss).backward()
