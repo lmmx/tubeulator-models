@@ -73,6 +73,8 @@ class RouteModel(nn.Module):
                     max_len=max_seq,
                     n_heads=n_heads,
                     dropout=dropout,
+                    # window_size=cfg.window_size if hasattr(cfg, "window_size") else 0,
+                    window_size=5,
                 )
             elif decoder_cls is TransformerStationDecoder:
                 self.decoder = TransformerStationDecoder(
