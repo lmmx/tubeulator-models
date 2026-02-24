@@ -207,7 +207,7 @@ class NextHopGPUDataset:
         od_origins: list[int] = []
         od_dests: list[int] = []
         self.od_routes: list[list[list[int]]] = []  # ground truth station seqs
-        step_remaining: list[int] = []
+        step_remaining: list[float] = []
 
         for od_idx, ex in enumerate(blob["examples"]):
             origin = ex["origin"]
@@ -216,21 +216,30 @@ class NextHopGPUDataset:
             od_dests.append(dest)
 
             routes = ex.get("routes", [ex])
-            seen_triples: set[tuple[int, int, int]] = set()
+            seen_triples: dict[tuple[int, int, int], int] = {}
             route_seqs: list[list[int]] = []
 
             for route in routes:
                 stations = route["label_station"]
+                cum_times = route.get("cum_times")
                 route_seqs.append(stations)
                 for i in range(len(stations) - 1):
                     triple = (stations[i], dest, stations[i + 1])
-                    if triple not in seen_triples:
-                        seen_triples.add(triple)
+                    if cum_times is not None:
+                        remaining = (cum_times[-1] - cum_times[i]) / 60.0
+                    else:
+                        remaining = float(len(stations) - 1 - i)
+
+                    if triple in seen_triples:
+                        idx = seen_triples[triple]
+                        step_remaining[idx] = min(step_remaining[idx], remaining)
+                    else:
+                        seen_triples[triple] = len(step_current)
                         step_current.append(stations[i])
                         step_dest.append(dest)
                         step_target.append(stations[i + 1])
                         step_od.append(od_idx)
-                        step_remaining.append(len(stations) - 1 - i)
+                        step_remaining.append(remaining)
 
             self.od_routes.append(route_seqs)
 

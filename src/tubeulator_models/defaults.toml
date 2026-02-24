@@ -78,7 +78,7 @@ batch_size = 128
 [profiles.dev.model.nexthop]
 batch_size = 2048
 lr = 5e-4
-n_enc_layers = 12
+n_enc_layers = 15
 
 [profiles.full]
 epochs = 200

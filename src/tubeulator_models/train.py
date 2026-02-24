@@ -22,7 +22,12 @@ from .evaluate import (
 from .graph_enriched import build_enriched_graph
 from .metrics_log import MetricsLogger
 from .models.combined import RouteModel
-from .topology import build_adj_mask, build_line_station_mask, extract
+from .topology import (
+    build_adj_mask,
+    build_edge_time_matrix,
+    build_line_station_mask,
+    extract,
+)
 
 
 __all__ = ["train"]
@@ -323,6 +328,10 @@ def train(cfg: TrainConfig) -> None:
             f"  adjacency mask: {adj.sum().item():,} edges, {n_avg:.1f} avg neighbors"
         )
 
+    edge_time_matrix = None
+    if is_nexthop:
+        edge_time_matrix = build_edge_time_matrix(topo, stations)
+
     if cfg.model_type == "change":
         ls_mask = build_line_station_mask(topo, stations, ds.lines).to(device)
         model.decoder.set_line_station_mask(ls_mask)
@@ -558,6 +567,7 @@ def train(cfg: TrainConfig) -> None:
                         all_rollouts,
                         torch.tensor(all_dests_list, device=device),
                         all_gt,
+                        edge_time_matrix=edge_time_matrix,
                         strat_keys=strat_keys,
                     )
                     rollout_metrics.step_acc = step_acc
