@@ -490,11 +490,13 @@ class HybridStationDecoder(nn.Module):
         max_len: int = 40,
         n_heads: int = 8,
         dropout: float = 0.1,
+        window_size: int = 0,
     ):
         super().__init__()
         self.max_len = max_len
         self.d_model = d_model
         self.n_stations = n_stations
+        self.window_size = window_size
 
         self.init_proj = nn.Linear(2 * d_model, d_model)
         self.gru = nn.GRUCell(d_model, d_model)
@@ -511,6 +513,13 @@ class HybridStationDecoder(nn.Module):
                 )
             )
             self.cross_norms.append(nn.LayerNorm(d_model))
+
+        # Windowed self-attention over recent decoded steps
+        if window_size > 0:
+            self.self_attn = nn.MultiheadAttention(
+                d_model, n_heads, dropout=dropout, batch_first=True
+            )
+            self.self_attn_norm = nn.LayerNorm(d_model)
 
         # Output projection (replaces pointer mechanism)
         self.out_proj = nn.Linear(d_model, n_stations)
@@ -546,12 +555,22 @@ class HybridStationDecoder(nn.Module):
 
         current = origins
         all_logits = []
+        h_buffer = []  # stores GRU hidden states for windowed self-attention
 
         gru_input = self.start_input.expand(B, -1)
 
         for step in range(self.max_len):
             # GRU step
             h = self.gru(gru_input, h)
+
+            # Windowed self-attention over recent steps
+            if self.window_size > 0 and len(h_buffer) > 0:
+                window = torch.stack(h_buffer[-self.window_size :], dim=1)  # (B, W, d)
+                query = h.unsqueeze(1)  # (B, 1, d)
+                attended, _ = self.self_attn(query, window, window)
+                h = self.self_attn_norm(h + attended.squeeze(1))
+
+            h_buffer.append(h)
 
             # Cross-attention: query is GRU hidden, keys/values are encoder output
             h_out = h.unsqueeze(1)

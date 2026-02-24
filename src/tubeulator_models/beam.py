@@ -64,6 +64,8 @@ def _beam_hybrid(
     max_len = dec.max_len
     K = beam_width
     N = H_all.size(0)
+    d = dec.d_model
+    W = dec.window_size
 
     memory = H_all.unsqueeze(0)  # (1, N, d)
     h_init = torch.relu(dec.init_proj(torch.cat([h_o, h_d], dim=-1)))
@@ -75,9 +77,29 @@ def _beam_hybrid(
     current = origins.unsqueeze(1)
     n_beams = 1
 
+    # Window buffer: (B, n_beams, 0, d) — grows each step, capped at W
+    if W > 0:
+        win_buf = torch.zeros(B, 1, 0, d, device=device)
+
     for step in range(max_len):
         # GRU step
         h_next = dec.gru(gru_input, h)
+
+        # Windowed self-attention
+        if W > 0 and win_buf.size(2) > 0:
+            BK = h_next.size(0)
+            # Reshape for attention: (B*n_beams, W_cur, d)
+            wb = win_buf.view(BK, -1, d)
+            query = h_next.unsqueeze(1)
+            attended, _ = dec.self_attn(query, wb, wb)
+            h_next = dec.self_attn_norm(h_next + attended.squeeze(1))
+
+        # Append to window buffer (before beam expansion changes n_beams)
+        if W > 0:
+            new_entry = h_next.view(B, n_beams, 1, d)
+            win_buf = torch.cat([win_buf, new_entry], dim=2)
+            if win_buf.size(2) > W:
+                win_buf = win_buf[:, :, -W:, :]
 
         # Cross-attention
         BK = h_next.size(0)
@@ -110,8 +132,14 @@ def _beam_hybrid(
         beam_idx = top_flat_idx // N
         tok_idx = top_flat_idx % N
 
-        d_model = h_next.size(-1)
-        h_selected = h_next.gather(1, beam_idx.unsqueeze(-1).expand(-1, -1, d_model))
+        h_selected = h_next.gather(1, beam_idx.unsqueeze(-1).expand(-1, -1, d))
+
+        # Gather window buffer by selected beams
+        if W > 0:
+            W_cur = win_buf.size(2)
+            win_buf = win_buf.gather(
+                1, beam_idx.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, W_cur, d)
+            )
 
         tok_flat = tok_idx.reshape(-1)
         fb = dec.station_emb(tok_flat).view(B, actual_k, -1)
