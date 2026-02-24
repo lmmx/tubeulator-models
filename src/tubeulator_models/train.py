@@ -8,12 +8,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .beam import beam_decode, beam_rollout_nexthop, rollout_nexthop
+from .beam import beam_decode, beam_rollout_nexthop
 from .config import TrainConfig
 from .dataset import PAD, GPURouteDataset, NextHopGPUDataset
 from .defaults import MODEL_TYPES
 from .evaluate import (
-    NextHopMetrics,
     RouteMetrics,
     compute_metrics,
     compute_nexthop_rollout_metrics,
