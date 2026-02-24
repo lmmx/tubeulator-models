@@ -147,15 +147,9 @@ def _expand_line_variants(
     topo: Topology,
     ln2i: dict[str, int],
     st2i: dict[str, int],
+    transfer_penalty: float = 240.0,
 ) -> list[dict]:
-    """Generate label dicts for all line-equivalent variants of a route.
-
-    For each leg, find which other lines serve the exact same station sequence
-    (shared track). Produce the cartesian product of all valid line assignments.
-    The station labels are identical across variants — only line (and possibly
-    direction) differ.
-    """
-    # For each leg, the set of lines that serve every edge in that leg
+    """Generate label dicts for all line-equivalent variants of a route."""
     leg_line_options: list[list[str]] = []
     for line, _dir, stations in route.legs:
         equiv = topo.equivalent_lines_for_leg(line, stations)
@@ -166,15 +160,22 @@ def _expand_line_variants(
     seen: set[tuple] = set()
 
     for line_combo in product(*leg_line_options):
-        # Build legs with the new line assignments
         label_line = []
         label_change = []
-        for (_, _, sts), new_ln in zip(route.legs, line_combo):
+
+        cum_times = [0.0]
+        t = 0.0
+        for leg_idx, ((_, _, sts), new_ln) in enumerate(zip(route.legs, line_combo)):
             d = topo.direction_of(new_ln, sts[0], sts[-1]) if len(sts) >= 2 else 0
             label_line.append((ln2i[new_ln], d))
             label_change.append((ln2i[new_ln], d, st2i[sts[-1]]))
 
-        # Dedup identical integer labels (shouldn't happen, but safe)
+            if leg_idx > 0:
+                t += transfer_penalty
+            for i in range(len(sts) - 1):
+                t += topo.travel_time(new_ln, sts[i], sts[i + 1])
+                cum_times.append(t)
+
         key = (tuple(tuple(x) for x in label_line),)
         if key in seen:
             continue
@@ -186,6 +187,7 @@ def _expand_line_variants(
                 "label_change": label_change,
                 "label_station": station_label,
                 "travel_time": route.travel_time,
+                "cum_times": cum_times,
             }
         )
 
@@ -251,7 +253,9 @@ def build_dataset(
 
                 route_labels = []
                 for route in routes:
-                    variants = _expand_line_variants(route, topo, ln2i, st2i)
+                    variants = _expand_line_variants(
+                        route, topo, ln2i, st2i, transfer_penalty
+                    )
                     route_labels.extend(variants)
 
                 # Dedup across routes (different Dijkstra paths might produce

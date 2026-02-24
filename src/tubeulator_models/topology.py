@@ -173,6 +173,48 @@ def extract(gtfs_path: Path) -> Topology:
     )
 
 
+def build_edge_time_matrix(topo: Topology, stations: list[str]) -> torch.Tensor:
+    """(N, N) matrix: minimum travel time in seconds between adjacent stations.
+
+    Takes the minimum across all lines serving each edge.
+    Symmetrizes observed times (if A→B is timed but B→A isn't, use the same value).
+    Non-adjacent pairs get a 120s fallback.
+    """
+    import torch
+
+    N = len(stations)
+    st2i = {s: i for i, s in enumerate(stations)}
+    matrix = torch.full((N, N), float("inf"))
+
+    # Observed travel times (directional)
+    for line, edges in topo.edge_time.items():
+        for (s1, s2), time in edges.items():
+            i, j = st2i.get(s1), st2i.get(s2)
+            if i is not None and j is not None:
+                matrix[i, j] = min(matrix[i, j].item(), time)
+
+    # Symmetrize: if one direction observed but not the other, copy it
+    missing = matrix == float("inf")
+    has_reverse = missing & ~missing.T
+    matrix[has_reverse] = matrix.T[has_reverse]
+
+    # Fallback for any remaining adjacencies
+    for adj in topo.line_adj.values():
+        for station, neighbors in adj.items():
+            i = st2i.get(station)
+            if i is None:
+                continue
+            for neighbor in neighbors:
+                j = st2i.get(neighbor)
+                if j is not None and matrix[i, j] == float("inf"):
+                    matrix[i, j] = 120.0
+
+    # Safety net: nothing traversable should be inf
+    matrix[matrix == float("inf")] = 120.0
+
+    return matrix
+
+
 def build_adj_mask(topo: Topology, stations: list[str]) -> torch.Tensor:
     import torch
 
