@@ -105,4 +105,4 @@ beam_eval_interval = 25
 batch_size = 4096
 lr = 3e-4
 epochs = 80
-n_enc_layers = 12
+n_enc_layers = 20

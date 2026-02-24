@@ -7,7 +7,7 @@ import argparse
 import torch
 import torch.nn as nn
 
-from .beam import beam_decode, rollout_nexthop
+from .beam import beam_decode, beam_rollout_nexthop, rollout_nexthop
 from .config import TrainConfig
 from .dataset import PAD, GPURouteDataset, NextHopGPUDataset
 from .defaults import MODEL_TYPES
@@ -525,16 +525,17 @@ def train(cfg: TrainConfig) -> None:
                     for rb_start in range(0, n_eval_od, rollout_bs):
                         rb_idx = eval_od_idx[rb_start : rb_start + rollout_bs]
                         origins_b, dests_b, gt_routes = nh_ds.get_od_batch(rb_idx)
-                        rollouts = rollout_nexthop(
+                        beam_results = beam_rollout_nexthop(
                             raw_model,
                             graph.x,
                             graph.edge_index,
                             graph.edge_attr,
                             origins_b,
                             dests_b,
+                            beam_width=cfg.beam_width,
                             max_steps=cfg.max_seq,
                         )
-                        all_rollouts.extend(rollouts)
+                        all_rollouts.extend([beams[0][0] for beams in beam_results])
                         all_gt.extend(gt_routes)
                         all_dests_list.extend(dests_b.tolist())
                         for gt in gt_routes:
