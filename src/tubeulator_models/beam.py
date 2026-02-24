@@ -641,10 +641,18 @@ def beam_rollout_nexthop(
             out = model.decoder(h_c, h_d_exp, current_ids=current_flat)
 
         logits = out["next_station"].view(B, K, N)
+        values = out["value"].view(B, K)  # predicted remaining hops
         logits = logits.masked_fill(visited, -1e4)
 
         lp = F.log_softmax(logits, dim=-1)
-        scores = cum_scores.unsqueeze(-1) + lp  # (B, K, N)
+
+        # A* scoring: path log-prob minus estimated remaining cost
+        # Lower value = closer to destination = better
+        # We need value estimates for the *next* stations, not current ones
+        # Approximate: use current value as a proxy (one-step lookahead
+        # would require N forward passes per beam, not worth it)
+        value_bonus = -0.1 * values.unsqueeze(-1).expand_as(lp)
+        scores = cum_scores.unsqueeze(-1) + lp + value_bonus  # (B, K, N)
 
         topk_scores, topk_flat = scores.view(B, K * N).topk(K, dim=-1)
         beam_idx = topk_flat // N

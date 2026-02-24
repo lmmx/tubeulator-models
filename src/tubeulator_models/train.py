@@ -6,6 +6,7 @@ import argparse
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from .beam import beam_decode, beam_rollout_nexthop, rollout_nexthop
 from .config import TrainConfig
@@ -25,6 +26,12 @@ from .topology import build_adj_mask, build_line_station_mask, extract
 
 
 __all__ = ["train"]
+
+# The 0.1 weight on value loss is a starting point: value pred
+# is auxiliary and shouldn't dominate the policy gradient.
+# MSE loss scale is naturally larger (predicting numbers like
+# 5-40 vs cross-entropy around 0.2), so 0.1 keeps them balanced
+VALUE_LOSS_WEIGHT = 0.1
 
 
 def _compute_min_route_loss(
@@ -426,7 +433,9 @@ def train(cfg: TrainConfig) -> None:
                 batch_idx = shuffled_train[batch_start : batch_start + cfg.batch_size]
 
                 if is_nexthop:
-                    currents, dests_b, targets = nh_ds.get_step_batch(batch_idx)
+                    currents, dests_b, targets, remaining = nh_ds.get_step_batch(
+                        batch_idx
+                    )
                     with torch.amp.autocast("cuda", enabled=use_amp):
                         logits = model(
                             graph.x,
@@ -435,7 +444,9 @@ def train(cfg: TrainConfig) -> None:
                             currents,
                             dests_b,
                         )
-                        loss = ce_nexthop(logits["next_station"], targets)
+                        policy_loss = ce_nexthop(logits["next_station"], targets)
+                        value_loss = F.mse_loss(logits["value"], remaining)
+                        loss = policy_loss + VALUE_LOSS_WEIGHT * value_loss
                     n_items = currents.size(0)
                 else:
                     raw_indices, origins, dests, labels = ds.get_batch(batch_idx)
@@ -485,7 +496,9 @@ def train(cfg: TrainConfig) -> None:
                 with torch.no_grad():
                     for batch_start in range(0, n_val, cfg.batch_size):
                         batch_idx = val_idx[batch_start : batch_start + cfg.batch_size]
-                        currents, dests_b, targets = nh_ds.get_step_batch(batch_idx)
+                        currents, dests_b, targets, _remaining = nh_ds.get_step_batch(
+                            batch_idx
+                        )
                         with torch.amp.autocast("cuda", enabled=use_amp):
                             logits = model(
                                 graph.x,

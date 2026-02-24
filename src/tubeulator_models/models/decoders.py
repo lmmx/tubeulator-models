@@ -607,10 +607,10 @@ class HybridStationDecoder(nn.Module):
 
 class NextHopDecoder(nn.Module):
     """
-    Next-hop policy decoder.
+    Next-hop policy decoder with optional value head.
 
-    Single-step prediction: given (h_current, h_dest), predict which
-    adjacent station to move to.  No autoregression, no sequence loss.
+    Policy: (h_current, h_dest) → logits over adjacent stations
+    Value:  (h_current, h_dest) → predicted remaining hops to destination
     """
 
     MASK_VALUE = -1e4
@@ -627,6 +627,12 @@ class NextHopDecoder(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(d_model, n_stations),
         )
+        self.value_head = nn.Sequential(
+            nn.Linear(2 * d_model, d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model, 1),
+        )
         self.register_buffer("adj_mask", None)
 
     def set_adj_mask(self, mask: torch.Tensor) -> None:
@@ -638,8 +644,10 @@ class NextHopDecoder(nn.Module):
         h_dest: torch.Tensor,  # (B, d)
         current_ids: torch.Tensor,  # (B,) station indices for adj masking
     ) -> dict[str, torch.Tensor]:
-        logits = self.mlp(torch.cat([h_current, h_dest], dim=-1))  # (B, V)
+        combined = torch.cat([h_current, h_dest], dim=-1)
+        logits = self.mlp(combined)
+        value = self.value_head(combined).squeeze(-1)  # (B,)
         if self.adj_mask is not None:
             mask = self.adj_mask[current_ids]
             logits = logits.masked_fill(~mask, self.MASK_VALUE)
-        return {"next_station": logits}
+        return {"next_station": logits, "value": value}

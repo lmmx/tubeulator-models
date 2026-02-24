@@ -207,6 +207,7 @@ class NextHopGPUDataset:
         od_origins: list[int] = []
         od_dests: list[int] = []
         self.od_routes: list[list[list[int]]] = []  # ground truth station seqs
+        step_remaining: list[int] = []
 
         for od_idx, ex in enumerate(blob["examples"]):
             origin = ex["origin"]
@@ -229,6 +230,7 @@ class NextHopGPUDataset:
                         step_dest.append(dest)
                         step_target.append(stations[i + 1])
                         step_od.append(od_idx)
+                        step_remaining.append(len(stations) - 1 - i)
 
             self.od_routes.append(route_seqs)
 
@@ -237,6 +239,9 @@ class NextHopGPUDataset:
         self.step_target = torch.tensor(step_target, dtype=torch.long, device=device)
         self.step_od = torch.tensor(step_od, dtype=torch.long, device=device)
         self.n_steps = len(step_current)
+        self.step_remaining = torch.tensor(
+            step_remaining, dtype=torch.float32, device=device
+        )
 
         self.od_origins = torch.tensor(od_origins, dtype=torch.long, device=device)
         self.od_dests = torch.tensor(od_dests, dtype=torch.long, device=device)
@@ -257,12 +262,13 @@ class NextHopGPUDataset:
 
     def get_step_batch(
         self, step_indices: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Return (current, dest, target) for given step indices."""
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Return (current, dest, target, remaining_hops) for given step indices."""
         return (
             self.step_current[step_indices],
             self.step_dest[step_indices],
             self.step_target[step_indices],
+            self.step_remaining[step_indices],
         )
 
     def get_od_batch(
