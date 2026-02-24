@@ -1,6 +1,7 @@
 [base]
 profile = "dev"
 default_model = "change"
+eval_only = false
 
 # ── Encoder ───────────────────────────────────────────────────
 d_model = 128

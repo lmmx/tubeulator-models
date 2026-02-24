@@ -26,6 +26,7 @@ from .topology import (
     build_edge_time_matrix,
     build_line_station_mask,
     extract,
+    floyd_warshall_times,
 )
 
 
@@ -328,8 +329,10 @@ def train(cfg: TrainConfig) -> None:
         )
 
     edge_time_matrix = None
+    optimal_times = None
     if is_nexthop:
         edge_time_matrix = build_edge_time_matrix(topo, stations)
+        optimal_times = floyd_warshall_times(topo, stations)
 
     if cfg.model_type == "change":
         ls_mask = build_line_station_mask(topo, stations, ds.lines).to(device)
@@ -371,6 +374,75 @@ def train(cfg: TrainConfig) -> None:
     best_metrics = None
     cfg.checkpoint_dir.mkdir(exist_ok=True)
     logger = MetricsLogger(cfg.model_type, cfg.hp_tag, cfg.checkpoint_dir.parent)
+
+    # ── Eval-only: load checkpoint and run full rollout ───────
+    if cfg.eval_only:
+        ckpt = cfg.checkpoint_dir / f"model_{cfg.model_type}_best.pt"
+        if not ckpt.exists():
+            rprint(f"[red]No checkpoint found at {ckpt}[/]")
+            return
+        raw_model.load_state_dict(
+            torch.load(ckpt, map_location=device, weights_only=True)
+        )
+        rprint(f"  Loaded checkpoint: {ckpt}")
+
+        if is_nexthop:
+            model.eval()
+            all_rollouts = []
+            all_gt = []
+            all_origins_list = []
+            all_dests_list = []
+            strat_keys = []
+
+            rollout_bs = min(256, n_val_od)
+            for rb_start in range(0, n_val_od, rollout_bs):
+                rb_idx = val_od[rb_start : rb_start + rollout_bs]
+                origins_b, dests_b, gt_routes = nh_ds.get_od_batch(rb_idx)
+                rollouts = beam_rollout_nexthop(
+                    raw_model,
+                    graph.x,
+                    graph.edge_index,
+                    graph.edge_attr,
+                    origins_b,
+                    dests_b,
+                    beam_width=cfg.beam_width,
+                    max_steps=cfg.max_seq,
+                )
+                all_rollouts.extend([beams[0][0] for beams in rollouts])
+                all_gt.extend(gt_routes)
+                all_origins_list.extend(origins_b.tolist())
+                all_dests_list.extend(dests_b.tolist())
+                for gt in gt_routes:
+                    strat_keys.append(min(len(r) for r in gt))
+
+            metrics = compute_nexthop_rollout_metrics(
+                all_rollouts,
+                torch.tensor(all_dests_list, device=device),
+                all_gt,
+                edge_time_matrix=edge_time_matrix,
+                optimal_times=optimal_times,
+                origins=torch.tensor(all_origins_list, device=device),
+                strat_keys=strat_keys,
+            )
+            rprint(f"\n[bold]Eval on full val set ({n_val_od:,} OD pairs):[/]")
+            rprint(f"  {metrics}")
+
+            if metrics.stratified:
+                bucket_ranges = [(2, 5), (6, 10), (11, 20), (21, 30), (31, 50)]
+                bucket_parts = []
+                for lo, hi in bucket_ranges:
+                    total_n = 0
+                    total_succ = 0
+                    for k, (succ, _lr, n) in metrics.stratified.items():
+                        if lo <= k <= hi:
+                            total_n += n
+                            total_succ += succ * n
+                    if total_n > 0:
+                        bucket_parts.append(
+                            f"{lo}-{hi}st:{total_succ / total_n:.0%}({total_n})"
+                        )
+                rprint(f"  stratified: {' | '.join(bucket_parts)}")
+        return
 
     train_gen = torch.Generator(device=device).manual_seed(cfg.seed)
     ce_nexthop = nn.CrossEntropyLoss() if is_nexthop else None
@@ -539,6 +611,7 @@ def train(cfg: TrainConfig) -> None:
 
                     all_rollouts: list[list[int]] = []
                     all_gt: list[list[list[int]]] = []
+                    all_origins_list: list[int] = []
                     all_dests_list: list[int] = []
                     strat_keys: list[int] = []
 
@@ -546,7 +619,7 @@ def train(cfg: TrainConfig) -> None:
                     for rb_start in range(0, n_eval_od, rollout_bs):
                         rb_idx = eval_od_idx[rb_start : rb_start + rollout_bs]
                         origins_b, dests_b, gt_routes = nh_ds.get_od_batch(rb_idx)
-                        beam_results = beam_rollout_nexthop(
+                        rollouts = beam_rollout_nexthop(
                             raw_model,
                             graph.x,
                             graph.edge_index,
@@ -556,8 +629,9 @@ def train(cfg: TrainConfig) -> None:
                             beam_width=cfg.beam_width,
                             max_steps=cfg.max_seq,
                         )
-                        all_rollouts.extend([beams[0][0] for beams in beam_results])
+                        all_rollouts.extend([beams[0][0] for beams in rollouts])
                         all_gt.extend(gt_routes)
+                        all_origins_list.extend(origins_b.tolist())
                         all_dests_list.extend(dests_b.tolist())
                         for gt in gt_routes:
                             strat_keys.append(min(len(r) for r in gt))
@@ -567,6 +641,8 @@ def train(cfg: TrainConfig) -> None:
                         torch.tensor(all_dests_list, device=device),
                         all_gt,
                         edge_time_matrix=edge_time_matrix,
+                        optimal_times=optimal_times,
+                        origins=torch.tensor(all_origins_list, device=device),
                         strat_keys=strat_keys,
                     )
                     rollout_metrics.step_acc = step_acc
@@ -786,6 +862,7 @@ def main():
     p.add_argument("--batch-size", type=int, default=None)
     p.add_argument("--lr", type=float, default=None)
     p.add_argument("--d-model", type=int, default=None)
+    p.add_argument("--eval-only", action="store_true")
     args = p.parse_args()
 
     cfg = TrainConfig.from_defaults(
@@ -795,6 +872,7 @@ def main():
         batch_size=args.batch_size,
         lr=args.lr,
         d_model=args.d_model,
+        eval_only=args.eval_only,
     )
     print(f"Config: {cfg.hp_tag}")
     train(cfg)

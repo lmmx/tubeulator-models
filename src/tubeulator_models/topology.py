@@ -255,3 +255,24 @@ def build_line_station_mask(
             if li is not None:
                 mask[li, si] = True
     return mask
+
+
+def floyd_warshall_times(topo: Topology, stations: list[str]) -> torch.Tensor:
+    """(N, N) all-pairs shortest travel time in seconds.
+
+    Runs Floyd-Warshall on the raw adjacency graph, ignoring lines
+    and transfer penalties. This is the true unconstrained optimum.
+    """
+    import torch
+
+    matrix = build_edge_time_matrix(topo, stations)
+    N = matrix.size(0)
+
+    # Self-loops = 0
+    matrix.fill_diagonal_(0.0)
+
+    for k in range(N):
+        through_k = matrix[:, k].unsqueeze(1) + matrix[k, :].unsqueeze(0)
+        matrix = torch.minimum(matrix, through_k)
+
+    return matrix
