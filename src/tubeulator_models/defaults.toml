@@ -64,6 +64,7 @@ scheduled_sampling = 0.5
 
 [model.nexthop]
 max_seq = 60
+n_enc_layers = 12
 
 # ── Profiles ─────────────────────────────────────────────────
 [profiles.dev]
