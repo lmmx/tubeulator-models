@@ -11,6 +11,7 @@ __all__ = [
     "InterchangeDecoder",
     "StationSeqDecoder",
     "TransformerStationDecoder",
+    "NextHopDecoder",
 ]
 
 
@@ -602,3 +603,43 @@ class HybridStationDecoder(nn.Module):
             gru_input = self.station_emb(tok)
 
         return {"station": torch.stack(all_logits, dim=1)}
+
+
+class NextHopDecoder(nn.Module):
+    """
+    Next-hop policy decoder.
+
+    Single-step prediction: given (h_current, h_dest), predict which
+    adjacent station to move to.  No autoregression, no sequence loss.
+    """
+
+    MASK_VALUE = -1e4
+
+    def __init__(self, d_model: int, n_stations: int, dropout: float = 0.1):
+        super().__init__()
+        self.n_stations = n_stations
+        self.mlp = nn.Sequential(
+            nn.Linear(2 * d_model, d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model, d_model),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model, n_stations),
+        )
+        self.register_buffer("adj_mask", None)
+
+    def set_adj_mask(self, mask: torch.Tensor) -> None:
+        self.adj_mask = mask
+
+    def forward(
+        self,
+        h_current: torch.Tensor,  # (B, d)
+        h_dest: torch.Tensor,  # (B, d)
+        current_ids: torch.Tensor,  # (B,) station indices for adj masking
+    ) -> dict[str, torch.Tensor]:
+        logits = self.mlp(torch.cat([h_current, h_dest], dim=-1))  # (B, V)
+        if self.adj_mask is not None:
+            mask = self.adj_mask[current_ids]
+            logits = logits.masked_fill(~mask, self.MASK_VALUE)
+        return {"next_station": logits}

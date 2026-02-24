@@ -502,3 +502,81 @@ def _beam_structured(
         )
 
     return results
+
+
+@torch.no_grad()
+def rollout_nexthop(
+    model,
+    graph_x: torch.Tensor,
+    graph_edge_index: torch.Tensor,
+    graph_edge_attr: torch.Tensor,
+    origins: torch.Tensor,  # (B,)
+    dests: torch.Tensor,  # (B,)
+    max_steps: int = 60,
+) -> list[list[int]]:
+    """
+    Greedy rollout for next-hop policy model.
+
+    Returns list of B station-index lists (including origin, excluding
+    steps after destination is reached or max_steps exhausted).
+    """
+    model.eval()
+    device = origins.device
+    B = origins.size(0)
+    N = model.n_stations
+    use_amp = device.type == "cuda"
+
+    with torch.amp.autocast("cuda", enabled=use_amp):
+        H = model.encoder(graph_x, graph_edge_index, graph_edge_attr)
+
+    h_d = H[dests]  # (B, d) — fixed for entire rollout
+
+    current = origins.clone()  # (B,)
+    # Track routes as padded tensor for efficiency
+    route_buf = torch.full((B, max_steps + 1), -1, dtype=torch.long, device=device)
+    route_buf[:, 0] = origins
+    route_len = torch.ones(B, dtype=torch.long, device=device)  # starts at 1 (origin)
+
+    # Visited mask: (B, N) — prevent cycles
+    visited = torch.zeros(B, N, dtype=torch.bool, device=device)
+    visited.scatter_(1, origins.unsqueeze(1), True)
+
+    # Track which examples are still active
+    active = torch.ones(B, dtype=torch.bool, device=device)
+
+    adj_mask = model.decoder.adj_mask  # (N, N) or None
+
+    for step in range(max_steps):
+        if not active.any():
+            break
+
+        with torch.amp.autocast("cuda", enabled=use_amp):
+            h_c = H[current]
+            out = model.decoder(h_c, h_d, current_ids=current)
+
+        logits = out["next_station"]  # (B, N)
+
+        # Mask visited stations
+        logits = logits.masked_fill(visited, -1e4)
+
+        nxt = logits.argmax(dim=-1)  # (B,)
+
+        # Only update active examples
+        current = torch.where(active, nxt, current)
+        step_idx = route_len.clamp(max=max_steps)
+        route_buf.scatter_(1, step_idx.unsqueeze(1), current.unsqueeze(1))
+        route_len += active.long()
+
+        visited.scatter_(1, current.unsqueeze(1), True)
+
+        # Deactivate examples that reached destination
+        reached = current == dests
+        active = active & ~reached
+
+    # Convert to lists
+    routes: list[list[int]] = []
+    for b in range(B):
+        length = route_len[b].item()
+        routes.append(route_buf[b, :length].tolist())
+
+    return routes

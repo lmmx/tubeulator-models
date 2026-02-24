@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import torch
 
@@ -210,5 +210,96 @@ def compute_metrics(
         station_acc=station_c / max(station_t, 1) if station_t > 0 else None,
         topologically_valid=valid_correct / max(B, 1),
         n_examples=B,
+        stratified=stratified,
+    )
+
+
+@dataclass
+class NextHopMetrics:
+    step_acc: float  # fraction of correct next-hop predictions
+    rollout_success: float  # fraction of rollouts reaching destination
+    avg_length_ratio: float  # mean(rollout_len / best_gt_len) for successful rollouts
+    n_steps: int
+    n_rollouts: int
+    stratified: dict[int, tuple[float, float, int]] | None = (
+        None  # bucket -> (success, len_ratio, n)
+    )
+
+    def __str__(self) -> str:
+        parts = [
+            f"step_acc={self.step_acc:.1%}",
+            f"success={self.rollout_success:.1%}",
+            f"len_ratio={self.avg_length_ratio:.2f}",
+        ]
+        return " | ".join(parts)
+
+
+def compute_nexthop_step_metrics(
+    logits: torch.Tensor,  # (B, V)
+    targets: torch.Tensor,  # (B,)
+) -> tuple[int, int]:
+    """Returns (correct, total) for a batch of next-hop predictions."""
+    preds = logits.argmax(dim=-1)
+    correct = (preds == targets).sum().item()
+    return correct, targets.size(0)
+
+
+def compute_nexthop_rollout_metrics(
+    rollouts: list[list[int]],
+    dests: torch.Tensor,
+    gt_routes: list[list[list[int]]],
+    strat_keys: list[int] | None = None,
+) -> NextHopMetrics:
+    """
+    Evaluate rollout quality against ground-truth routes.
+
+    gt_routes[b] is a list of valid station sequences for OD pair b.
+    """
+    from collections import defaultdict
+
+    B = len(rollouts)
+    n_success = 0
+    length_ratios: list[float] = []
+    bucket_data: dict[int, list[tuple[bool, float]]] = defaultdict(list)
+
+    for b in range(B):
+        route = rollouts[b]
+        dest = dests[b].item()
+        reached = len(route) > 1 and route[-1] == dest
+
+        # Best ground-truth length for this OD pair
+        best_gt_len = min(len(r) for r in gt_routes[b])
+        ratio = (
+            len(route) / best_gt_len if reached and best_gt_len > 0 else float("inf")
+        )
+
+        if reached:
+            n_success += 1
+            length_ratios.append(ratio)
+
+        if strat_keys is not None:
+            bucket_data[strat_keys[b]].append((reached, ratio))
+
+    avg_ratio = (
+        sum(length_ratios) / max(len(length_ratios), 1)
+        if length_ratios
+        else float("inf")
+    )
+
+    stratified = None
+    if strat_keys is not None:
+        stratified = {}
+        for k, entries in sorted(bucket_data.items()):
+            succ = sum(1 for r, _ in entries if r)
+            ratios = [r for ok, r in entries if ok]
+            avg_r = sum(ratios) / max(len(ratios), 1) if ratios else float("inf")
+            stratified[k] = (succ / len(entries), avg_r, len(entries))
+
+    return NextHopMetrics(
+        step_acc=0.0,  # filled in by caller
+        rollout_success=n_success / max(B, 1),
+        avg_length_ratio=avg_ratio,
+        n_steps=0,
+        n_rollouts=B,
         stratified=stratified,
     )
