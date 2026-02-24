@@ -64,7 +64,6 @@ scheduled_sampling = 0.5
 
 [model.nexthop]
 max_seq = 60
-n_enc_layers = 12
 
 # ── Profiles ─────────────────────────────────────────────────
 [profiles.dev]
@@ -79,6 +78,7 @@ batch_size = 128
 [profiles.dev.model.nexthop]
 batch_size = 2048
 lr = 5e-4
+n_enc_layers = 12
 
 [profiles.full]
 epochs = 200
@@ -105,3 +105,4 @@ beam_eval_interval = 25
 batch_size = 4096
 lr = 3e-4
 epochs = 80
+n_enc_layers = 12
