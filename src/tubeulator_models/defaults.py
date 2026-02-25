@@ -90,6 +90,11 @@ def repo_root() -> Path:
     return _REPO_ROOT
 
 
+def resolve_hub() -> dict:
+    """Return the [hub] section — model name → HF repo ID."""
+    return _raw().get("hub", {})
+
+
 def default_model_type() -> str:
     """Return the default model type from TOML [base]."""
     return _raw().get("base", {})["default_model"]

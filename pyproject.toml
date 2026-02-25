@@ -18,6 +18,8 @@ tm-graph2pyg    = "tubeulator_models.cli:graph2pyg"
 tm-gtfs2pyg     = "tubeulator_models.cli:gtfs2pyg"
 tm-train        = "tubeulator_models.train:main"
 tm-hierarchical = "tubeulator_models.hierarchical:main"
+tm-export       = "tubeulator_models.export:main"
+tm-infer        = "tubeulator_models.infer:main"
 
 [build-system]
 requires = ["uv_build>=0.9.26,<0.10.0"]
@@ -41,6 +43,10 @@ plot = [
     "contextily>=1.7.0",
     "matplotlib>=3.10.8",
 ]
+hf = [
+    "hf>=1.4.1",
+    "safetensors>=0.7.0",
+]
 
 [tool.ruff]
 target-version = "py312"
@@ -57,4 +63,4 @@ lines-after-imports = 2
 "__init__.py" = ["E401", "F401"]
 
 [tool.uv]
-default-groups = ["pull", "prep", "plot", "pyg"]
+default-groups = ["pull", "prep", "plot", "pyg", "hf"]

@@ -1,0 +1,13 @@
+{
+  "model_type": "nexthop",
+  "variant": "policy",
+  "d_model": 512,
+  "n_heads": 8,
+  "n_enc_layers": 15,
+  "max_seq": 60,
+  "dropout": 0.1,
+  "n_stations": 272,
+  "n_lines": 11,
+  "value_primary": false,
+  "n_params": 9457425
+}

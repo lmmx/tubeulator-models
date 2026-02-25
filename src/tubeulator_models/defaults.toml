@@ -51,6 +51,10 @@ output = "data/graph/network.png"
 dpi = 150
 title = "London Tube Network — travel time (colour) & frequency (width)"
 
+[hub]
+nexthop_policy = "permutans/tube-nexthop-policy"
+nexthop_value = "permutans/tube-distance-field"
+
 # ── Model-specific overrides ─────────────────────────────────
 [model.line]
 max_seq = 4
