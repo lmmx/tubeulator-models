@@ -721,3 +721,91 @@ def beam_rollout_nexthop(
         results.append(beams[:K])
 
     return results
+
+
+@torch.no_grad()
+def bellman_rollout_nexthop(
+    model,
+    graph_x: torch.Tensor,
+    graph_edge_index: torch.Tensor,
+    graph_edge_attr: torch.Tensor,
+    origins: torch.Tensor,
+    dests: torch.Tensor,
+    edge_time_matrix: torch.Tensor,
+    max_steps: int = 60,
+) -> list[list[int]]:
+    """
+    Bellman-optimal rollout using value head as cost-to-go estimate.
+
+    Action rule: argmin_n [ edge_time(s, n) + V(n, d) ]
+    No policy logits, no beam search.
+    """
+    model.eval()
+    device = origins.device
+    B = origins.size(0)
+    N = model.n_stations
+    use_amp = device.type == "cuda"
+
+    with torch.amp.autocast("cuda", enabled=use_amp):
+        H = model.encoder(graph_x, graph_edge_index, graph_edge_attr)
+
+    h_d = H[dests]  # (B, d)
+    adj_mask = model.decoder.adj_mask  # (N, N)
+
+    # Precompute V(n, d) for all stations and all examples in batch.
+    # V_all[b, n] = value_head([H[n], h_d[b]])
+    # Single forward pass through value head on (B*N, 2d) tensor.
+    d = H.size(1)
+    H_exp = H.unsqueeze(0).expand(B, -1, -1)  # (B, N, d)
+    h_d_exp = h_d.unsqueeze(1).expand(-1, N, -1)  # (B, N, d)
+    combined = torch.cat([H_exp, h_d_exp], dim=-1)  # (B, N, 2d)
+
+    with torch.amp.autocast("cuda", enabled=use_amp):
+        V_all = model.decoder.value_head(combined.view(B * N, 2 * d)).view(
+            B, N
+        )  # (B, N) predicted remaining time for each station
+
+    # Edge times from current station: will index per step
+    edge_times = edge_time_matrix.to(device)  # (N, N)
+
+    current = origins.clone()
+    route_buf = torch.full((B, max_steps + 1), -1, dtype=torch.long, device=device)
+    route_buf[:, 0] = origins
+    route_len = torch.ones(B, dtype=torch.long, device=device)
+
+    visited = torch.zeros(B, N, dtype=torch.bool, device=device)
+    visited.scatter_(1, origins.unsqueeze(1), True)
+
+    active = torch.ones(B, dtype=torch.bool, device=device)
+
+    for step in range(max_steps):
+        if not active.any():
+            break
+
+        # Cost for each neighbor: edge_time(current, n) + V(n, d)
+        costs = edge_times[current] + V_all  # (B, N)
+
+        # Soft-penalize visited (prefer unvisited, allow backtrack)
+        costs = costs + visited.float() * 1e6
+
+        # Hard-block non-adjacent
+        if adj_mask is not None:
+            costs = costs.masked_fill(~adj_mask[current], float("inf"))
+
+        nxt = costs.argmin(dim=-1)
+
+        current = torch.where(active, nxt, current)
+        step_idx = route_len.clamp(max=max_steps)
+        route_buf.scatter_(1, step_idx.unsqueeze(1), current.unsqueeze(1))
+        route_len += active.long()
+
+        visited.scatter_(1, current.unsqueeze(1), True)
+
+        reached = current == dests
+        active = active & ~reached
+
+    routes: list[list[int]] = []
+    for b in range(B):
+        length = route_len[b].item()
+        routes.append(route_buf[b, :length].tolist())
+    return routes

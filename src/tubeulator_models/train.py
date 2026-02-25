@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .beam import beam_decode, beam_rollout_nexthop
+from .beam import beam_decode, beam_rollout_nexthop, bellman_rollout_nexthop
 from .config import TrainConfig
 from .dataset import PAD, GPURouteDataset, NextHopGPUDataset
 from .defaults import MODEL_TYPES
@@ -31,6 +31,7 @@ from .topology import (
 
 
 __all__ = ["train"]
+
 
 # The 0.1 weight on value loss is a starting point: value pred
 # is auxiliary and shouldn't dominate the policy gradient.
@@ -463,6 +464,88 @@ def train(cfg: TrainConfig) -> None:
                             f" dij={avg_dij:.2f}({total_n})"
                         )
                 rprint(f"  stratified: {' | '.join(bucket_parts)}")
+
+            # ── Bellman rollout diagnostic ────────────────────────
+            rprint("\n[bold]Bellman rollout diagnostic:[/]")
+
+            all_bellman_routes = []
+            all_gt_bell = []
+            all_origins_bell = []
+            all_dests_bell = []
+            strat_keys_bell = []
+
+            for rb_start in range(0, n_val_od, rollout_bs):
+                rb_idx = val_od[rb_start : rb_start + rollout_bs]
+                origins_b, dests_b, gt_routes = nh_ds.get_od_batch(rb_idx)
+                routes = bellman_rollout_nexthop(
+                    raw_model,
+                    graph.x,
+                    graph.edge_index,
+                    graph.edge_attr,
+                    origins_b,
+                    dests_b,
+                    edge_time_matrix,
+                    max_steps=cfg.max_seq,
+                )
+                all_bellman_routes.extend(routes)
+                all_gt_bell.extend(gt_routes)
+                all_origins_bell.extend(origins_b.tolist())
+                all_dests_bell.extend(dests_b.tolist())
+                for gt in gt_routes:
+                    strat_keys_bell.append(min(len(r) for r in gt))
+
+            bellman_metrics = compute_nexthop_rollout_metrics(
+                all_bellman_routes,
+                torch.tensor(all_dests_bell, device=device),
+                all_gt_bell,
+                edge_time_matrix=edge_time_matrix,
+                optimal_times=optimal_times,
+                origins=torch.tensor(all_origins_bell, device=device),
+                strat_keys=strat_keys_bell,
+            )
+            rprint(f"  Bellman: {bellman_metrics}")
+
+            if bellman_metrics.stratified:
+                bucket_ranges = [(2, 5), (6, 10), (11, 20), (21, 30), (31, 50)]
+                bucket_parts = []
+                for lo, hi in bucket_ranges:
+                    total_n = 0
+                    total_succ = 0
+                    dij_vals = []
+                    for k, (succ, _lr, dij, n) in bellman_metrics.stratified.items():
+                        if lo <= k <= hi:
+                            total_n += n
+                            total_succ += succ * n
+                            if dij != float("inf"):
+                                dij_vals.extend([dij] * n)
+                    if total_n > 0:
+                        avg_dij = (
+                            sum(dij_vals) / len(dij_vals) if dij_vals else float("inf")
+                        )
+                        bucket_parts.append(
+                            f"{lo}-{hi}st:{total_succ / total_n:.0%}"
+                            f" dij={avg_dij:.2f}({total_n})"
+                        )
+                rprint(f"  stratified: {' | '.join(bucket_parts)}")
+
+            # ── Value head MAE against Floyd-Warshall ─────────────
+            rprint("\n[bold]Value head accuracy:[/]")
+            model.eval()
+            with torch.no_grad():
+                H = raw_model.encoder(graph.x, graph.edge_index, graph.edge_attr)
+                sample_od = val_od[: min(2000, n_val_od)]
+                o_samp = nh_ds.od_origins[sample_od]
+                d_samp = nh_ds.od_dests[sample_od]
+                h_o = H[o_samp]
+                h_d = H[d_samp]
+                combined = torch.cat([h_o, h_d], dim=-1)
+                v_pred = raw_model.decoder.value_head(combined).squeeze(-1)
+                # Floyd-Warshall ground truth: remaining time from origin to dest in minutes
+                v_true = optimal_times[o_samp.cpu(), d_samp.cpu()].to(device) / 60.0
+                mae = (v_pred - v_true).abs().mean().item()
+                rmse = ((v_pred - v_true) ** 2).mean().sqrt().item()
+                rprint(f"  MAE:  {mae:.2f} min")
+                rprint(f"  RMSE: {rmse:.2f} min")
         return
 
     train_gen = torch.Generator(device=device).manual_seed(cfg.seed)
