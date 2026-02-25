@@ -425,8 +425,8 @@ def train(cfg: TrainConfig) -> None:
                     if t == float("inf"):
                         rprint(
                             f"  [red]INF EDGE: route {b}, "
-                            f"edge {route[i]}→{route[i+1]}, "
-                            f"stations={stations[route[i]]}→{stations[route[i+1]]}[/]"
+                            f"edge {route[i]}→{route[i + 1]}, "
+                            f"stations={stations[route[i]]}→{stations[route[i + 1]]}[/]"
                         )
                         break
 
