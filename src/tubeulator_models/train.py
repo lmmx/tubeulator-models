@@ -447,13 +447,20 @@ def train(cfg: TrainConfig) -> None:
                 for lo, hi in bucket_ranges:
                     total_n = 0
                     total_succ = 0
-                    for k, (succ, _lr, n) in metrics.stratified.items():
+                    dij_vals = []
+                    for k, (succ, _lr, dij, n) in metrics.stratified.items():
                         if lo <= k <= hi:
                             total_n += n
                             total_succ += succ * n
+                            if dij != float("inf"):
+                                dij_vals.extend([dij] * n)
                     if total_n > 0:
+                        avg_dij = (
+                            sum(dij_vals) / len(dij_vals) if dij_vals else float("inf")
+                        )
                         bucket_parts.append(
-                            f"{lo}-{hi}st:{total_succ / total_n:.0%}({total_n})"
+                            f"{lo}-{hi}st:{total_succ / total_n:.0%}"
+                            f" dij={avg_dij:.2f}({total_n})"
                         )
                 rprint(f"  stratified: {' | '.join(bucket_parts)}")
         return
@@ -670,15 +677,29 @@ def train(cfg: TrainConfig) -> None:
                         for lo, hi in bucket_ranges:
                             total_n = 0
                             total_succ = 0
-                            for k, (succ, _lr, n) in rollout_metrics.stratified.items():
+                            dij_vals = []
+                            for k, (
+                                succ,
+                                _lr,
+                                dij,
+                                n,
+                            ) in rollout_metrics.stratified.items():
                                 if lo <= k <= hi:
                                     total_n += n
                                     total_succ += succ * n
+                                    if dij != float("inf"):
+                                        dij_vals.extend([dij] * n)
                             if total_n > 0:
-                                bucket_parts.append(
-                                    f"{lo}-{hi}st:{total_succ / total_n:.0%}({total_n})"
+                                avg_dij = (
+                                    sum(dij_vals) / len(dij_vals)
+                                    if dij_vals
+                                    else float("inf")
                                 )
-                        rprint(f"  stratified success: {' | '.join(bucket_parts)}")
+                                bucket_parts.append(
+                                    f"{lo}-{hi}st:{total_succ / total_n:.0%}"
+                                    f" dij={avg_dij:.2f}({total_n})"
+                                )
+                        rprint(f"  stratified: {' | '.join(bucket_parts)}")
 
                 star = ""
                 if run_rollout and success_rate > best_val:

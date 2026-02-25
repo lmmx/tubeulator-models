@@ -269,7 +269,7 @@ def compute_nexthop_rollout_metrics(
     n_success = 0
     length_ratios: list[float] = []
     dijkstra_ratios: list[float] = []
-    bucket_data: dict[int, list[tuple[bool, float]]] = defaultdict(list)
+    bucket_data: dict[int, list[tuple[bool, float, float]]] = defaultdict(list)
 
     for b in range(B):
         route = rollouts[b]
@@ -291,17 +291,20 @@ def compute_nexthop_rollout_metrics(
             else float("inf")
         )
 
+        dij_ratio = float("inf")
+        if reached and optimal_times is not None and origins is not None:
+            opt = optimal_times[origins[b].item(), dest].item()
+            if opt > 0:
+                dij_ratio = rollout_cost / opt
+
         if reached:
             n_success += 1
             length_ratios.append(ratio)
-
-            if optimal_times is not None and origins is not None:
-                opt = optimal_times[origins[b].item(), dest].item()
-                if opt > 0:
-                    dijkstra_ratios.append(rollout_cost / opt)
+            if dij_ratio != float("inf"):
+                dijkstra_ratios.append(dij_ratio)
 
         if strat_keys is not None:
-            bucket_data[strat_keys[b]].append((reached, ratio))
+            bucket_data[strat_keys[b]].append((reached, ratio, dij_ratio))
 
     avg_ratio = (
         sum(length_ratios) / len(length_ratios) if length_ratios else float("inf")
@@ -314,10 +317,12 @@ def compute_nexthop_rollout_metrics(
     if strat_keys is not None:
         stratified = {}
         for k, entries in sorted(bucket_data.items()):
-            succ = sum(1 for r, _ in entries if r)
-            ratios = [r for ok, r in entries if ok]
+            succ = sum(1 for r, _, _ in entries if r)
+            ratios = [r for ok, r, _ in entries if ok]
+            dij_ratios = [d for ok, _, d in entries if ok and d != float("inf")]
             avg_r = sum(ratios) / len(ratios) if ratios else float("inf")
-            stratified[k] = (succ / len(entries), avg_r, len(entries))
+            avg_d = sum(dij_ratios) / len(dij_ratios) if dij_ratios else float("inf")
+            stratified[k] = (succ / len(entries), avg_r, avg_d, len(entries))
 
     return NextHopMetrics(
         step_acc=0.0,
