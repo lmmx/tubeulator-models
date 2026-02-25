@@ -1,6 +1,7 @@
 [base]
 profile = "dev"
 default_model = "change"
+eval_only = false
 
 # ── Encoder ───────────────────────────────────────────────────
 d_model = 128
@@ -24,9 +25,9 @@ beam_eval_sample = 0.2
 beam_width = 5
 
 # ── Route enumeration ────────────────────────────────────────
-max_transfers = 2
+max_transfers = 4
 max_routes_per_od = 3
-transfer_penalty = 240
+transfer_penalty = 0 # 240
 
 # ── Data paths (relative to repo root) ───────────────────────
 [data]
@@ -62,6 +63,9 @@ max_seq = 40
 label_smoothing = 0.0
 scheduled_sampling = 0.5
 
+[model.nexthop]
+max_seq = 60
+
 # ── Profiles ─────────────────────────────────────────────────
 [profiles.dev]
 epochs = 20
@@ -71,6 +75,11 @@ beam_eval_sample = 0.1
 
 [profiles.dev.model.station]
 batch_size = 128
+
+[profiles.dev.model.nexthop]
+batch_size = 2048
+lr = 5e-4
+n_enc_layers = 16
 
 [profiles.full]
 epochs = 200
@@ -92,3 +101,9 @@ lr = 2.8e-4
 beam_width = 20
 epochs = 100
 beam_eval_interval = 25
+
+[profiles.full.model.nexthop]
+batch_size = 4096
+lr = 3e-4
+epochs = 80
+n_enc_layers = 15

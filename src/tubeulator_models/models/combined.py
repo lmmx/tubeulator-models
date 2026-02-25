@@ -8,6 +8,7 @@ from .decoders import (
     HybridStationDecoder,
     InterchangeDecoder,
     LineSeqDecoder,
+    NextHopDecoder,
     StationSeqDecoder,
     TransformerStationDecoder,
 )
@@ -20,7 +21,7 @@ _DECODERS = {
     "line": LineSeqDecoder,
     "change": InterchangeDecoder,
     "station": HybridStationDecoder,
-    # To revert to GRU decoder: change the line above to StationSeqDecoder
+    "nexthop": NextHopDecoder,
 }
 
 
@@ -64,6 +65,12 @@ class RouteModel(nn.Module):
                 n_stations,
                 max_legs=max_seq,
             )
+        elif model_type == "nexthop":
+            self.decoder = NextHopDecoder(
+                d_model=d_model,
+                n_stations=n_stations,
+                dropout=dropout,
+            )
         elif model_type == "station":
             decoder_cls = _DECODERS["station"]
             if decoder_cls is HybridStationDecoder:
@@ -73,6 +80,8 @@ class RouteModel(nn.Module):
                     max_len=max_seq,
                     n_heads=n_heads,
                     dropout=dropout,
+                    # window_size=cfg.window_size if hasattr(cfg, "window_size") else 0,
+                    window_size=12,
                 )
             elif decoder_cls is TransformerStationDecoder:
                 self.decoder = TransformerStationDecoder(
@@ -104,6 +113,10 @@ class RouteModel(nn.Module):
         H = self.encoder(graph_x, graph_edge_index, graph_edge_attr)
         h_o = H[origins]
         h_d = H[dests]
+
+        if self.model_type == "nexthop":
+            # origins = current station IDs, dests = destination station IDs
+            return self.decoder(h_o, h_d, current_ids=origins)
 
         if self.model_type == "station":
             return self.decoder(

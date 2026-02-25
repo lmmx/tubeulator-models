@@ -18,7 +18,7 @@ __all__ = [
 _TOML = Path(__file__).with_name("defaults.toml")
 _REPO_ROOT = Path(__file__).parents[2]
 
-MODEL_TYPES = ("line", "change", "station")
+MODEL_TYPES = ("line", "change", "station", "nexthop")
 
 
 def _scalars(d: dict) -> dict:
