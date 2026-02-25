@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .beam import beam_decode, beam_rollout_nexthop
+from .beam import beam_decode, beam_rollout_nexthop, bellman_rollout_nexthop
 from .config import TrainConfig
 from .dataset import PAD, GPURouteDataset, NextHopGPUDataset
 from .defaults import MODEL_TYPES
@@ -26,16 +26,18 @@ from .topology import (
     build_edge_time_matrix,
     build_line_station_mask,
     extract,
+    floyd_warshall_times,
 )
 
 
 __all__ = ["train"]
 
+
 # The 0.1 weight on value loss is a starting point: value pred
 # is auxiliary and shouldn't dominate the policy gradient.
 # MSE loss scale is naturally larger (predicting numbers like
 # 5-40 vs cross-entropy around 0.2), so 0.1 keeps them balanced
-VALUE_LOSS_WEIGHT = 0.1
+VALUE_LOSS_WEIGHT = 0.5
 
 
 def _compute_min_route_loss(
@@ -328,8 +330,10 @@ def train(cfg: TrainConfig) -> None:
         )
 
     edge_time_matrix = None
+    optimal_times = None
     if is_nexthop:
-        edge_time_matrix = build_edge_time_matrix(topo, stations)
+        edge_time_matrix = build_edge_time_matrix(topo, stations).to(device)
+        optimal_times = floyd_warshall_times(topo, stations).to(device)
 
     if cfg.model_type == "change":
         ls_mask = build_line_station_mask(topo, stations, ds.lines).to(device)
@@ -372,8 +376,179 @@ def train(cfg: TrainConfig) -> None:
     cfg.checkpoint_dir.mkdir(exist_ok=True)
     logger = MetricsLogger(cfg.model_type, cfg.hp_tag, cfg.checkpoint_dir.parent)
 
+    # ── Eval-only: load checkpoint and run full rollout ───────
+    if cfg.eval_only:
+        ckpt = cfg.checkpoint_dir / f"model_{cfg.model_type}_best.pt"
+        if not ckpt.exists():
+            rprint(f"[red]No checkpoint found at {ckpt}[/]")
+            return
+        raw_model.load_state_dict(
+            torch.load(ckpt, map_location=device, weights_only=True)
+        )
+        rprint(f"  Loaded checkpoint: {ckpt}")
+
+        if is_nexthop:
+            model.eval()
+            all_rollouts = []
+            all_gt = []
+            all_origins_list = []
+            all_dests_list = []
+            strat_keys = []
+
+            rollout_bs = min(256, n_val_od)
+            for rb_start in range(0, n_val_od, rollout_bs):
+                rb_idx = val_od[rb_start : rb_start + rollout_bs]
+                origins_b, dests_b, gt_routes = nh_ds.get_od_batch(rb_idx)
+                rollouts = beam_rollout_nexthop(
+                    raw_model,
+                    graph.x,
+                    graph.edge_index,
+                    graph.edge_attr,
+                    origins_b,
+                    dests_b,
+                    beam_width=cfg.beam_width,
+                    max_steps=cfg.max_seq,
+                )
+                all_rollouts.extend([beams[0][0] for beams in rollouts])
+                all_gt.extend(gt_routes)
+                all_origins_list.extend(origins_b.tolist())
+                all_dests_list.extend(dests_b.tolist())
+                for gt in gt_routes:
+                    strat_keys.append(min(len(r) for r in gt))
+
+            # Find the inf culprit
+            for b, route in enumerate(all_rollouts):
+                if route[-1] != all_dests_list[b]:
+                    continue
+                for i in range(len(route) - 1):
+                    t = edge_time_matrix[route[i], route[i + 1]].item()
+                    if t == float("inf"):
+                        rprint(
+                            f"  [red]INF EDGE: route {b}, "
+                            f"edge {route[i]}→{route[i + 1]}, "
+                            f"stations={stations[route[i]]}→{stations[route[i + 1]]}[/]"
+                        )
+                        break
+
+            metrics = compute_nexthop_rollout_metrics(
+                all_rollouts,
+                torch.tensor(all_dests_list, device=device),
+                all_gt,
+                edge_time_matrix=edge_time_matrix,
+                optimal_times=optimal_times,
+                origins=torch.tensor(all_origins_list, device=device),
+                strat_keys=strat_keys,
+            )
+            rprint(f"\n[bold]Eval on full val set ({n_val_od:,} OD pairs):[/]")
+            rprint(f"  {metrics}")
+
+            if metrics.stratified:
+                bucket_ranges = [(2, 5), (6, 10), (11, 20), (21, 30), (31, 50)]
+                bucket_parts = []
+                for lo, hi in bucket_ranges:
+                    total_n = 0
+                    total_succ = 0
+                    dij_vals = []
+                    for k, (succ, _lr, dij, n) in metrics.stratified.items():
+                        if lo <= k <= hi:
+                            total_n += n
+                            total_succ += succ * n
+                            if dij != float("inf"):
+                                dij_vals.extend([dij] * n)
+                    if total_n > 0:
+                        avg_dij = (
+                            sum(dij_vals) / len(dij_vals) if dij_vals else float("inf")
+                        )
+                        bucket_parts.append(
+                            f"{lo}-{hi}st:{total_succ / total_n:.0%}"
+                            f" dij={avg_dij:.2f}({total_n})"
+                        )
+                rprint(f"  stratified: {' | '.join(bucket_parts)}")
+
+            # ── Bellman rollout diagnostic ────────────────────────
+            rprint("\n[bold]Bellman rollout diagnostic:[/]")
+
+            all_bellman_routes = []
+            all_gt_bell = []
+            all_origins_bell = []
+            all_dests_bell = []
+            strat_keys_bell = []
+
+            for rb_start in range(0, n_val_od, rollout_bs):
+                rb_idx = val_od[rb_start : rb_start + rollout_bs]
+                origins_b, dests_b, gt_routes = nh_ds.get_od_batch(rb_idx)
+                routes = bellman_rollout_nexthop(
+                    raw_model,
+                    graph.x,
+                    graph.edge_index,
+                    graph.edge_attr,
+                    origins_b,
+                    dests_b,
+                    edge_time_matrix,
+                    max_steps=cfg.max_seq,
+                )
+                all_bellman_routes.extend(routes)
+                all_gt_bell.extend(gt_routes)
+                all_origins_bell.extend(origins_b.tolist())
+                all_dests_bell.extend(dests_b.tolist())
+                for gt in gt_routes:
+                    strat_keys_bell.append(min(len(r) for r in gt))
+
+            bellman_metrics = compute_nexthop_rollout_metrics(
+                all_bellman_routes,
+                torch.tensor(all_dests_bell, device=device),
+                all_gt_bell,
+                edge_time_matrix=edge_time_matrix,
+                optimal_times=optimal_times,
+                origins=torch.tensor(all_origins_bell, device=device),
+                strat_keys=strat_keys_bell,
+            )
+            rprint(f"  Bellman: {bellman_metrics}")
+
+            if bellman_metrics.stratified:
+                bucket_ranges = [(2, 5), (6, 10), (11, 20), (21, 30), (31, 50)]
+                bucket_parts = []
+                for lo, hi in bucket_ranges:
+                    total_n = 0
+                    total_succ = 0
+                    dij_vals = []
+                    for k, (succ, _lr, dij, n) in bellman_metrics.stratified.items():
+                        if lo <= k <= hi:
+                            total_n += n
+                            total_succ += succ * n
+                            if dij != float("inf"):
+                                dij_vals.extend([dij] * n)
+                    if total_n > 0:
+                        avg_dij = (
+                            sum(dij_vals) / len(dij_vals) if dij_vals else float("inf")
+                        )
+                        bucket_parts.append(
+                            f"{lo}-{hi}st:{total_succ / total_n:.0%}"
+                            f" dij={avg_dij:.2f}({total_n})"
+                        )
+                rprint(f"  stratified: {' | '.join(bucket_parts)}")
+
+            # ── Value head MAE against Floyd-Warshall ─────────────
+            rprint("\n[bold]Value head accuracy:[/]")
+            model.eval()
+            with torch.no_grad():
+                H = raw_model.encoder(graph.x, graph.edge_index, graph.edge_attr)
+                sample_od = val_od[: min(2000, n_val_od)]
+                o_samp = nh_ds.od_origins[sample_od]
+                d_samp = nh_ds.od_dests[sample_od]
+                h_o = H[o_samp]
+                h_d = H[d_samp]
+                combined = torch.cat([h_o, h_d], dim=-1)
+                v_pred = raw_model.decoder.value_head(combined).squeeze(-1)
+                # Floyd-Warshall ground truth: remaining time from origin to dest in minutes
+                v_true = optimal_times[o_samp.cpu(), d_samp.cpu()].to(device) / 60.0
+                mae = (v_pred - v_true).abs().mean().item()
+                rmse = ((v_pred - v_true) ** 2).mean().sqrt().item()
+                rprint(f"  MAE:  {mae:.2f} min")
+                rprint(f"  RMSE: {rmse:.2f} min")
+        return
+
     train_gen = torch.Generator(device=device).manual_seed(cfg.seed)
-    ce_nexthop = nn.CrossEntropyLoss() if is_nexthop else None
 
     # ── Progress columns adapt to model type ──────────────────
     if is_nexthop:
@@ -452,7 +627,38 @@ def train(cfg: TrainConfig) -> None:
                             currents,
                             dests_b,
                         )
-                        policy_loss = ce_nexthop(logits["next_station"], targets)
+                        # Q-soft targets: cost-aware supervision
+                        raw_logits = logits["next_station"]  # (B, N)
+                        adj = model.decoder.adj_mask[currents]  # (B, N)
+
+                        # Q(n) = edge_time(current, n) + shortest_remaining(n, dest)
+                        q = (
+                            edge_time_matrix[currents] + optimal_times[:, dests_b].T
+                        )  # (B, N) in seconds
+                        q = q.masked_fill(~adj, float("inf"))
+
+                        # Center and normalize per sample
+                        q_min = q.min(dim=-1, keepdim=True).values
+                        q_centered = q - q_min
+                        q_for_std = q_centered.clone()
+                        q_for_std[~adj] = 0.0
+                        n_adj = adj.float().sum(dim=-1, keepdim=True)
+                        q_mean = q_for_std.sum(dim=-1, keepdim=True) / n_adj
+                        q_var = ((q_for_std - q_mean) * adj.float()).pow(2).sum(
+                            dim=-1, keepdim=True
+                        ) / n_adj
+                        q_std = q_var.sqrt().clamp(min=1.0)
+                        q_norm = q_centered / q_std
+
+                        # Soft targets via softmin
+                        beta = 4.0
+                        soft_targets = F.softmax(-beta * q_norm, dim=-1)
+
+                        # KL divergence
+                        log_probs = F.log_softmax(raw_logits, dim=-1)
+                        policy_loss = F.kl_div(
+                            log_probs, soft_targets, reduction="batchmean"
+                        )
                         value_loss = F.mse_loss(logits["value"], remaining)
                         loss = policy_loss + VALUE_LOSS_WEIGHT * value_loss
                     n_items = currents.size(0)
@@ -539,6 +745,7 @@ def train(cfg: TrainConfig) -> None:
 
                     all_rollouts: list[list[int]] = []
                     all_gt: list[list[list[int]]] = []
+                    all_origins_list: list[int] = []
                     all_dests_list: list[int] = []
                     strat_keys: list[int] = []
 
@@ -546,7 +753,7 @@ def train(cfg: TrainConfig) -> None:
                     for rb_start in range(0, n_eval_od, rollout_bs):
                         rb_idx = eval_od_idx[rb_start : rb_start + rollout_bs]
                         origins_b, dests_b, gt_routes = nh_ds.get_od_batch(rb_idx)
-                        beam_results = beam_rollout_nexthop(
+                        rollouts = beam_rollout_nexthop(
                             raw_model,
                             graph.x,
                             graph.edge_index,
@@ -556,8 +763,9 @@ def train(cfg: TrainConfig) -> None:
                             beam_width=cfg.beam_width,
                             max_steps=cfg.max_seq,
                         )
-                        all_rollouts.extend([beams[0][0] for beams in beam_results])
+                        all_rollouts.extend([beams[0][0] for beams in rollouts])
                         all_gt.extend(gt_routes)
+                        all_origins_list.extend(origins_b.tolist())
                         all_dests_list.extend(dests_b.tolist())
                         for gt in gt_routes:
                             strat_keys.append(min(len(r) for r in gt))
@@ -567,6 +775,8 @@ def train(cfg: TrainConfig) -> None:
                         torch.tensor(all_dests_list, device=device),
                         all_gt,
                         edge_time_matrix=edge_time_matrix,
+                        optimal_times=optimal_times,
+                        origins=torch.tensor(all_origins_list, device=device),
                         strat_keys=strat_keys,
                     )
                     rollout_metrics.step_acc = step_acc
@@ -580,15 +790,29 @@ def train(cfg: TrainConfig) -> None:
                         for lo, hi in bucket_ranges:
                             total_n = 0
                             total_succ = 0
-                            for k, (succ, _lr, n) in rollout_metrics.stratified.items():
+                            dij_vals = []
+                            for k, (
+                                succ,
+                                _lr,
+                                dij,
+                                n,
+                            ) in rollout_metrics.stratified.items():
                                 if lo <= k <= hi:
                                     total_n += n
                                     total_succ += succ * n
+                                    if dij != float("inf"):
+                                        dij_vals.extend([dij] * n)
                             if total_n > 0:
-                                bucket_parts.append(
-                                    f"{lo}-{hi}st:{total_succ / total_n:.0%}({total_n})"
+                                avg_dij = (
+                                    sum(dij_vals) / len(dij_vals)
+                                    if dij_vals
+                                    else float("inf")
                                 )
-                        rprint(f"  stratified success: {' | '.join(bucket_parts)}")
+                                bucket_parts.append(
+                                    f"{lo}-{hi}st:{total_succ / total_n:.0%}"
+                                    f" dij={avg_dij:.2f}({total_n})"
+                                )
+                        rprint(f"  stratified: {' | '.join(bucket_parts)}")
 
                 star = ""
                 if run_rollout and success_rate > best_val:
@@ -786,6 +1010,7 @@ def main():
     p.add_argument("--batch-size", type=int, default=None)
     p.add_argument("--lr", type=float, default=None)
     p.add_argument("--d-model", type=int, default=None)
+    p.add_argument("--eval-only", action="store_true")
     args = p.parse_args()
 
     cfg = TrainConfig.from_defaults(
@@ -795,6 +1020,7 @@ def main():
         batch_size=args.batch_size,
         lr=args.lr,
         d_model=args.d_model,
+        eval_only=args.eval_only,
     )
     print(f"Config: {cfg.hp_tag}")
     train(cfg)

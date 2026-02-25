@@ -2,6 +2,7 @@
 cache/
 checkpoints/
 logs/
+data/routes.json
 
 *.egg-info
 *.py[oc]
