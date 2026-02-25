@@ -2,6 +2,7 @@
 profile = "dev"
 default_model = "change"
 eval_only = false
+value_primary = false
 
 # ── Encoder ───────────────────────────────────────────────────
 d_model = 128
@@ -65,6 +66,7 @@ scheduled_sampling = 0.5
 
 [model.nexthop]
 max_seq = 60
+value_primary = true
 
 # ── Profiles ─────────────────────────────────────────────────
 [profiles.dev]
@@ -103,7 +105,7 @@ epochs = 100
 beam_eval_interval = 25
 
 [profiles.full.model.nexthop]
-batch_size = 4096
+batch_size = 1024
 lr = 3e-4
-epochs = 80
+epochs = 200
 n_enc_layers = 15
