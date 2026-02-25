@@ -37,7 +37,7 @@ __all__ = ["train"]
 # is auxiliary and shouldn't dominate the policy gradient.
 # MSE loss scale is naturally larger (predicting numbers like
 # 5-40 vs cross-entropy around 0.2), so 0.1 keeps them balanced
-VALUE_LOSS_WEIGHT = 0.1
+VALUE_LOSS_WEIGHT = 0.5
 
 
 def _compute_min_route_loss(
@@ -332,8 +332,8 @@ def train(cfg: TrainConfig) -> None:
     edge_time_matrix = None
     optimal_times = None
     if is_nexthop:
-        edge_time_matrix = build_edge_time_matrix(topo, stations)
-        optimal_times = floyd_warshall_times(topo, stations)
+        edge_time_matrix = build_edge_time_matrix(topo, stations).to(device)
+        optimal_times = floyd_warshall_times(topo, stations).to(device)
 
     if cfg.model_type == "change":
         ls_mask = build_line_station_mask(topo, stations, ds.lines).to(device)
@@ -549,7 +549,6 @@ def train(cfg: TrainConfig) -> None:
         return
 
     train_gen = torch.Generator(device=device).manual_seed(cfg.seed)
-    ce_nexthop = nn.CrossEntropyLoss() if is_nexthop else None
 
     # ── Progress columns adapt to model type ──────────────────
     if is_nexthop:
@@ -628,7 +627,36 @@ def train(cfg: TrainConfig) -> None:
                             currents,
                             dests_b,
                         )
-                        policy_loss = ce_nexthop(logits["next_station"], targets)
+                        # Q-soft targets: cost-aware supervision
+                        raw_logits = logits["next_station"]  # (B, N)
+                        adj = model.decoder.adj_mask[currents]  # (B, N)
+
+                        # Q(n) = edge_time(current, n) + shortest_remaining(n, dest)
+                        q = (
+                            edge_time_matrix[currents] + optimal_times[:, dests_b]
+                        )  # (B, N) in seconds
+                        q = q.masked_fill(~adj, float("inf"))
+
+                        # Center and normalize per sample
+                        q_min = q.min(dim=-1, keepdim=True).values
+                        q_centered = q - q_min
+                        q_std = (
+                            q_centered[adj]
+                            .view(currents.size(0), -1)
+                            .std(dim=-1, keepdim=True)
+                            .clamp(min=1.0)
+                        )
+                        q_norm = q_centered / q_std
+
+                        # Soft targets via softmin
+                        beta = 4.0
+                        soft_targets = F.softmax(-beta * q_norm, dim=-1)
+
+                        # KL divergence
+                        log_probs = F.log_softmax(raw_logits, dim=-1)
+                        policy_loss = F.kl_div(
+                            log_probs, soft_targets, reduction="batchmean"
+                        )
                         value_loss = F.mse_loss(logits["value"], remaining)
                         loss = policy_loss + VALUE_LOSS_WEIGHT * value_loss
                     n_items = currents.size(0)
