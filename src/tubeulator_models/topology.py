@@ -9,7 +9,11 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import median
+from typing import TYPE_CHECKING
 
+
+if TYPE_CHECKING:
+    import torch
 
 __all__ = ["Topology", "extract"]
 

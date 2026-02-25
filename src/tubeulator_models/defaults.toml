@@ -2,6 +2,7 @@
 profile = "dev"
 default_model = "change"
 eval_only = false
+value_primary = false
 
 # ── Encoder ───────────────────────────────────────────────────
 d_model = 128
@@ -49,6 +50,10 @@ calendar_end = ""
 output = "data/graph/network.png"
 dpi = 150
 title = "London Tube Network — travel time (colour) & frequency (width)"
+
+[hub]
+nexthop_policy = "permutans/tube-nexthop-policy"
+nexthop_value = "permutans/tube-distance-field"
 
 # ── Model-specific overrides ─────────────────────────────────
 [model.line]

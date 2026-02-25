@@ -3,6 +3,7 @@ cache/
 checkpoints/
 logs/
 data/routes.json
+models/**/*.safetensors
 
 *.egg-info
 *.py[oc]

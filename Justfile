@@ -45,6 +45,36 @@ train-all profile="":
 train-full:
     just train-all full
 
+# ── Model Export & Upload ────────────────────────────────────
+
+# Export model to HF-ready directory (no upload)
+export variant profile="full":
+    uv run --group pyg tm-export {{variant}} --profile {{profile}}
+
+# Export and upload to Hugging Face
+upload variant profile="full":
+    uv run --group pyg tm-export {{variant}} --profile {{profile}} --upload --private
+
+# Export both models
+export-all: (export "policy") (export "value")
+
+# Upload both models
+upload-all: (upload "policy") (upload "value")
+
+# ── Inference ────────────────────────────────────────────────
+
+# Policy rollout
+route origin dest:
+    uv run --group pyg tm-infer policy -o "{{origin}}" -d "{{dest}}"
+
+# Travel time prediction
+time origin dest:
+    uv run --group pyg tm-infer value -o "{{origin}}" -d "{{dest}}"
+
+# Both: route + time
+plan origin dest:
+    uv run --group pyg tm-infer route -o "{{origin}}" -d "{{dest}}"
+
 # ── Shortcuts ────────────────────────────────────────────────
 
 # Build everything from scratch and train all models

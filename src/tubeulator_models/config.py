@@ -41,6 +41,7 @@ class TrainConfig(BaseModel):
     warmup_ratio: float
     label_smoothing: float
     scheduled_sampling: float
+    value_primary: bool
 
     # ── inference ─────────────────────────────────────────────
     beam_width: int

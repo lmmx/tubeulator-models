@@ -314,6 +314,7 @@ def train(cfg: TrainConfig) -> None:
         model_type=cfg.model_type,
         max_seq=cfg.max_seq,
         dropout=cfg.dropout,
+        value_primary=cfg.value_primary,
     ).to(device)
 
     n_params = sum(p.numel() for p in model.parameters())
@@ -375,6 +376,24 @@ def train(cfg: TrainConfig) -> None:
     best_metrics = None
     cfg.checkpoint_dir.mkdir(exist_ok=True)
     logger = MetricsLogger(cfg.model_type, cfg.hp_tag, cfg.checkpoint_dir.parent)
+
+    # ── Value-primary: separate training path ─────────────────
+    if is_nexthop and cfg.value_primary:
+        _train_value_primary(
+            cfg,
+            model,
+            raw_model,
+            graph,
+            device,
+            use_amp,
+            n_stations,
+            stations,
+            topo,
+            edge_time_matrix,
+            optimal_times,
+            split_gen,
+        )
+        return
 
     # ── Eval-only: load checkpoint and run full rollout ───────
     if cfg.eval_only:
@@ -1002,6 +1021,431 @@ def train(cfg: TrainConfig) -> None:
     rprint(f"Checkpoint → {cfg.checkpoint_dir / f'model_{cfg.model_type}_best.pt'}")
 
 
+def _train_value_primary(
+    cfg: TrainConfig,
+    model,
+    raw_model,
+    graph,
+    device: torch.device,
+    use_amp: bool,
+    n_stations: int,
+    stations: list[str],
+    topo,
+    edge_time_matrix: torch.Tensor,
+    optimal_times: torch.Tensor,
+    split_gen: torch.Generator,
+) -> None:
+    """
+    Train the encoder + value head with pure MSE against Floyd-Warshall.
+
+    No policy loss. The model learns V(s, d) = shortest travel time from s to d.
+    At inference, Bellman rollout: argmin_n [ edge_time(s,n) + V(n,d) ].
+    """
+    import time
+
+    from rich import print as rprint
+    from rich.progress import (
+        BarColumn,
+        Progress,
+        TextColumn,
+        TimeRemainingColumn,
+    )
+
+    t_start = time.monotonic()
+    N = n_stations
+
+    # ── Build all valid OD pairs from Floyd-Warshall ──────────
+    valid_mask = optimal_times < float("inf")
+    valid_mask.fill_diagonal_(False)
+    all_s, all_d = valid_mask.nonzero(as_tuple=True)
+    n_pairs = all_s.size(0)
+
+    # Targets in minutes (matches existing value head convention)
+    all_targets = optimal_times[all_s, all_d] / 60.0
+
+    rprint(f"  Value-primary mode: {n_pairs:,} valid OD pairs from {N} stations")
+
+    # ── Train/val split at OD-pair level ──────────────────────
+    n_val_pairs = max(1, int(cfg.val_split * n_pairs))
+    n_train_pairs = n_pairs - n_val_pairs
+    pair_perm = torch.randperm(n_pairs, device=device, generator=split_gen)
+
+    train_idx = pair_perm[:n_train_pairs]
+    val_idx = pair_perm[n_train_pairs:]
+
+    train_s, train_d = all_s[train_idx], all_d[train_idx]
+    train_targets = all_targets[train_idx]
+    val_s, val_d = all_s[val_idx], all_d[val_idx]
+    val_targets = all_targets[val_idx]
+
+    rprint(f"  {n_train_pairs:,} train / {n_val_pairs:,} val OD pairs")
+
+    effective_bs = min(cfg.batch_size, n_train_pairs)
+    n_batches = (n_train_pairs + effective_bs - 1) // effective_bs
+    rprint(f"  batch_size={effective_bs:,} → {n_batches} batches/epoch")
+
+    # ── Only train encoder + value head, freeze policy MLP ────
+    for p in raw_model.decoder.mlp.parameters():
+        p.requires_grad_(False)
+
+    optimizer = torch.optim.AdamW(
+        [p for p in model.parameters() if p.requires_grad],
+        lr=cfg.lr,
+        weight_decay=cfg.weight_decay,
+    )
+
+    total_steps = n_batches * cfg.epochs
+    warmup_steps = int(cfg.warmup_ratio * total_steps)
+
+    scheduler = torch.optim.lr_scheduler.SequentialLR(
+        optimizer,
+        schedulers=[
+            torch.optim.lr_scheduler.LinearLR(
+                optimizer, start_factor=0.01, total_iters=max(warmup_steps, 1)
+            ),
+            torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=max(total_steps - warmup_steps, 1)
+            ),
+        ],
+        milestones=[warmup_steps],
+    )
+
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+    train_gen = torch.Generator(device=device).manual_seed(cfg.seed)
+
+    # ── Load rollout eval dataset (for Bellman eval) ──────────
+    nh_ds = NextHopGPUDataset(cfg.routes_path, device=device)
+    n_od = nh_ds.n_od
+    n_val_od = max(1, int(cfg.val_split * n_od))
+    od_perm = torch.randperm(n_od, device=device, generator=split_gen)
+    val_od = od_perm[n_od - n_val_od :]
+
+    best_mae = float("inf")
+    best_bellman_dij = float("inf")
+    cfg.checkpoint_dir.mkdir(exist_ok=True)
+
+    # ── Eval-only path ────────────────────────────────────────
+    if cfg.eval_only:
+        ckpt = cfg.checkpoint_dir / "model_nexthop_value_best.pt"
+        if not ckpt.exists():
+            rprint(f"[red]No checkpoint at {ckpt}[/]")
+            return
+        raw_model.load_state_dict(
+            torch.load(ckpt, map_location=device, weights_only=True)
+        )
+        rprint(f"  Loaded: {ckpt}")
+        _eval_value_primary(
+            raw_model,
+            model,
+            graph,
+            device,
+            use_amp,
+            val_s,
+            val_d,
+            val_targets,
+            nh_ds,
+            val_od,
+            edge_time_matrix,
+            optimal_times,
+            n_stations,
+            stations,
+            cfg,
+            full=True,
+        )
+        return
+
+    # ── Training loop ─────────────────────────────────────────
+    with Progress(
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        TimeRemainingColumn(),
+        TextColumn("·"),
+        TextColumn("loss [cyan]{task.fields[loss]:.4f}"),
+        TextColumn("MAE [bold green]{task.fields[mae]:.2f}[/]min"),
+        TextColumn("bellman [bold yellow]{task.fields[bellman]:.2f}"),
+        TextColumn("success [bold]{task.fields[success]:.1%}"),
+        TextColumn("lr [dim]{task.fields[lr]:.1e}"),
+        TextColumn("{task.fields[star]}"),
+        refresh_per_second=4,
+    ) as progress:
+        task = progress.add_task(
+            "Value-primary",
+            total=cfg.epochs,
+            loss=0.0,
+            mae=99.0,
+            bellman=99.0,
+            success=0.0,
+            lr=cfg.lr,
+            star="",
+        )
+
+        for epoch in range(1, cfg.epochs + 1):
+            # ── Train ─────────────────────────────────────────
+            model.train()
+            shuffle = torch.randperm(n_train_pairs, device=device, generator=train_gen)
+            epoch_loss = 0.0
+            n_seen = 0
+
+            for batch_start in range(0, n_train_pairs, effective_bs):
+                batch_perm = shuffle[batch_start : batch_start + effective_bs]
+                s_batch = train_s[batch_perm]
+                d_batch = train_d[batch_perm]
+                t_batch = train_targets[batch_perm]
+
+                with torch.amp.autocast("cuda", enabled=use_amp):
+                    H = model.encoder(graph.x, graph.edge_index, graph.edge_attr)
+                    h_s = H[s_batch]
+                    h_d = H[d_batch]
+                    combined = torch.cat([h_s, h_d], dim=-1)
+                    v_pred = model.decoder.value_head(combined).squeeze(-1)
+                    # Errors under 2 min get squared, linear penalty for errors over that
+                    loss = F.huber_loss(v_pred, t_batch, delta=2.0)  # 2 min
+
+                optimizer.zero_grad(set_to_none=True)
+                scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
+                scaler.step(optimizer)
+                scaler.update()
+                scheduler.step()
+
+                bs = s_batch.size(0)
+                epoch_loss += loss.detach().item() * bs
+                n_seen += bs
+
+            avg_loss = epoch_loss / n_seen
+
+            # ── Validate: MAE on held-out OD pairs ────────────
+            model.eval()
+            with torch.no_grad(), torch.amp.autocast("cuda", enabled=use_amp):
+                H = raw_model.encoder(graph.x, graph.edge_index, graph.edge_attr)
+                h_vs = H[val_s]
+                h_vd = H[val_d]
+                combined = torch.cat([h_vs, h_vd], dim=-1)
+                v_pred = raw_model.decoder.value_head(combined).squeeze(-1)
+                mae = (v_pred - val_targets).abs().mean().item()
+
+            # ── Bellman rollout eval (periodic) ───────────────
+            run_bellman = (
+                cfg.beam_eval_interval > 0 and epoch % cfg.beam_eval_interval == 0
+            ) or epoch == cfg.epochs
+
+            success = 0.0
+            dij_ratio = float("inf")
+
+            if run_bellman:
+                n_eval_od = max(1, int(n_val_od * cfg.beam_eval_sample))
+                eval_od_perm = torch.randperm(n_val_od, device=device)[:n_eval_od]
+                eval_od_idx = val_od[eval_od_perm]
+
+                all_routes_b: list[list[int]] = []
+                all_gt: list[list[list[int]]] = []
+                all_origins_l: list[int] = []
+                all_dests_l: list[int] = []
+                strat_keys: list[int] = []
+
+                rollout_bs = min(256, n_eval_od)
+                for rb_start in range(0, n_eval_od, rollout_bs):
+                    rb_idx = eval_od_idx[rb_start : rb_start + rollout_bs]
+                    origins_b, dests_b, gt_routes = nh_ds.get_od_batch(rb_idx)
+                    routes = bellman_rollout_nexthop(
+                        raw_model,
+                        graph.x,
+                        graph.edge_index,
+                        graph.edge_attr,
+                        origins_b,
+                        dests_b,
+                        edge_time_matrix,
+                        max_steps=cfg.max_seq,
+                    )
+                    all_routes_b.extend(routes)
+                    all_gt.extend(gt_routes)
+                    all_origins_l.extend(origins_b.tolist())
+                    all_dests_l.extend(dests_b.tolist())
+                    for gt in gt_routes:
+                        strat_keys.append(min(len(r) for r in gt))
+
+                rollout_metrics = compute_nexthop_rollout_metrics(
+                    all_routes_b,
+                    torch.tensor(all_dests_l, device=device),
+                    all_gt,
+                    edge_time_matrix=edge_time_matrix,
+                    optimal_times=optimal_times,
+                    origins=torch.tensor(all_origins_l, device=device),
+                    strat_keys=strat_keys,
+                )
+                success = rollout_metrics.rollout_success
+                dij_ratio = rollout_metrics.avg_dijkstra_ratio
+
+                if rollout_metrics.stratified:
+                    bucket_ranges = [(2, 5), (6, 10), (11, 20), (21, 30), (31, 50)]
+                    bucket_parts = []
+                    for lo, hi in bucket_ranges:
+                        total_n = 0
+                        total_succ = 0
+                        dij_vals = []
+                        for k, (
+                            succ,
+                            _lr,
+                            dij,
+                            n,
+                        ) in rollout_metrics.stratified.items():
+                            if lo <= k <= hi:
+                                total_n += n
+                                total_succ += succ * n
+                                if dij != float("inf"):
+                                    dij_vals.extend([dij] * n)
+                        if total_n > 0:
+                            avg_d = (
+                                sum(dij_vals) / len(dij_vals)
+                                if dij_vals
+                                else float("inf")
+                            )
+                            bucket_parts.append(
+                                f"{lo}-{hi}st:{total_succ / total_n:.0%}"
+                                f" dij={avg_d:.2f}({total_n})"
+                            )
+                    rprint(f"  stratified: {' | '.join(bucket_parts)}")
+
+            # ── Checkpoint on best MAE ────────────────────────
+            lr_now = optimizer.param_groups[0]["lr"]
+            star = ""
+            if mae < best_mae:
+                best_mae = mae
+                star = "[bold green]★[/]"
+                ckpt = cfg.checkpoint_dir / "model_nexthop_value_best.pt"
+                torch.save(raw_model.state_dict(), ckpt)
+            if run_bellman and dij_ratio < best_bellman_dij:
+                best_bellman_dij = dij_ratio
+
+            progress.update(
+                task,
+                advance=1,
+                loss=avg_loss,
+                mae=mae,
+                bellman=dij_ratio if run_bellman else best_bellman_dij,
+                success=success if run_bellman else 0.0,
+                lr=lr_now,
+                star=star,
+            )
+
+    elapsed = time.monotonic() - t_start
+    m, s = divmod(int(elapsed), 60)
+    h, m = divmod(m, 60)
+    time_str = f"{h}h{m:02d}m{s:02d}s" if h else f"{m}m{s:02d}s"
+    rprint(
+        f"\n[bold green]Done.[/] Best MAE: {best_mae:.2f} min | "
+        f"Best Bellman Dijkstra: {best_bellman_dij:.2f} ({time_str})"
+    )
+    rprint(f"Checkpoint → {cfg.checkpoint_dir / 'model_nexthop_value_best.pt'}")
+
+
+def _eval_value_primary(
+    raw_model,
+    model,
+    graph,
+    device,
+    use_amp,
+    val_s,
+    val_d,
+    val_targets,
+    nh_ds,
+    val_od,
+    edge_time_matrix,
+    optimal_times,
+    n_stations,
+    stations,
+    cfg,
+    full: bool = False,
+):
+    """Full eval for value-primary checkpoint."""
+    from rich import print as rprint
+
+    model.eval()
+    n_val_od = val_od.size(0)
+
+    # ── Value head MAE ────────────────────────────────────────
+    with torch.no_grad(), torch.amp.autocast("cuda", enabled=use_amp):
+        H = raw_model.encoder(graph.x, graph.edge_index, graph.edge_attr)
+        h_vs = H[val_s]
+        h_vd = H[val_d]
+        combined = torch.cat([h_vs, h_vd], dim=-1)
+        v_pred = raw_model.decoder.value_head(combined).squeeze(-1)
+        mae = (v_pred - val_targets).abs().mean().item()
+        rmse = ((v_pred - val_targets) ** 2).mean().sqrt().item()
+
+    rprint("\n[bold]Value head accuracy:[/]")
+    rprint(f"  MAE:  {mae:.2f} min")
+    rprint(f"  RMSE: {rmse:.2f} min")
+
+    # ── Distance distribution diagnostics ─────────────────────
+    errors = (v_pred - val_targets).abs()
+    for threshold in [0.5, 1.0, 2.0, 5.0]:
+        pct = (errors < threshold).float().mean().item()
+        rprint(f"  < {threshold} min error: {pct:.1%}")
+
+    # ── Bellman rollout ───────────────────────────────────────
+    rprint(f"\n[bold]Bellman rollout ({n_val_od:,} OD pairs):[/]")
+
+    all_routes: list[list[int]] = []
+    all_gt: list[list[list[int]]] = []
+    all_origins_l: list[int] = []
+    all_dests_l: list[int] = []
+    strat_keys: list[int] = []
+
+    rollout_bs = min(256, n_val_od)
+    for rb_start in range(0, n_val_od, rollout_bs):
+        rb_idx = val_od[rb_start : rb_start + rollout_bs]
+        origins_b, dests_b, gt_routes = nh_ds.get_od_batch(rb_idx)
+        routes = bellman_rollout_nexthop(
+            raw_model,
+            graph.x,
+            graph.edge_index,
+            graph.edge_attr,
+            origins_b,
+            dests_b,
+            edge_time_matrix,
+            max_steps=cfg.max_seq,
+        )
+        all_routes.extend(routes)
+        all_gt.extend(gt_routes)
+        all_origins_l.extend(origins_b.tolist())
+        all_dests_l.extend(dests_b.tolist())
+        for gt in gt_routes:
+            strat_keys.append(min(len(r) for r in gt))
+
+    metrics = compute_nexthop_rollout_metrics(
+        all_routes,
+        torch.tensor(all_dests_l, device=device),
+        all_gt,
+        edge_time_matrix=edge_time_matrix,
+        optimal_times=optimal_times,
+        origins=torch.tensor(all_origins_l, device=device),
+        strat_keys=strat_keys,
+    )
+    rprint(f"  {metrics}")
+
+    if metrics.stratified:
+        bucket_ranges = [(2, 5), (6, 10), (11, 20), (21, 30), (31, 50)]
+        bucket_parts = []
+        for lo, hi in bucket_ranges:
+            total_n = 0
+            total_succ = 0
+            dij_vals = []
+            for k, (succ, _lr, dij, n) in metrics.stratified.items():
+                if lo <= k <= hi:
+                    total_n += n
+                    total_succ += succ * n
+                    if dij != float("inf"):
+                        dij_vals.extend([dij] * n)
+            if total_n > 0:
+                avg_d = sum(dij_vals) / len(dij_vals) if dij_vals else float("inf")
+                bucket_parts.append(
+                    f"{lo}-{hi}st:{total_succ / total_n:.0%} dij={avg_d:.2f}({total_n})"
+                )
+        rprint(f"  stratified: {' | '.join(bucket_parts)}")
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--model", choices=list(MODEL_TYPES), default=None)
@@ -1011,6 +1455,7 @@ def main():
     p.add_argument("--lr", type=float, default=None)
     p.add_argument("--d-model", type=int, default=None)
     p.add_argument("--eval-only", action="store_true")
+    p.add_argument("--value-primary", action="store_true")
     args = p.parse_args()
 
     cfg = TrainConfig.from_defaults(
@@ -1021,6 +1466,7 @@ def main():
         lr=args.lr,
         d_model=args.d_model,
         eval_only=args.eval_only,
+        value_primary=args.value_primary or None,
     )
     print(f"Config: {cfg.hp_tag}")
     train(cfg)

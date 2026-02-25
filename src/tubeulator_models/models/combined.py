@@ -37,6 +37,7 @@ class RouteModel(nn.Module):
         max_seq: int,
         dropout: float,
         n_dec_layers: int = 4,
+        value_primary: bool = False,
     ):
         super().__init__()
         if model_type not in _DECODERS:
@@ -70,6 +71,7 @@ class RouteModel(nn.Module):
                 d_model=d_model,
                 n_stations=n_stations,
                 dropout=dropout,
+                value_primary=value_primary,
             )
         elif model_type == "station":
             decoder_cls = _DECODERS["station"]
