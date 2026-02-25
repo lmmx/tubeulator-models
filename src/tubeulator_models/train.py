@@ -633,19 +633,21 @@ def train(cfg: TrainConfig) -> None:
 
                         # Q(n) = edge_time(current, n) + shortest_remaining(n, dest)
                         q = (
-                            edge_time_matrix[currents] + optimal_times[:, dests_b]
+                            edge_time_matrix[currents] + optimal_times[:, dests_b].T
                         )  # (B, N) in seconds
                         q = q.masked_fill(~adj, float("inf"))
 
                         # Center and normalize per sample
                         q_min = q.min(dim=-1, keepdim=True).values
                         q_centered = q - q_min
-                        q_std = (
-                            q_centered[adj]
-                            .view(currents.size(0), -1)
-                            .std(dim=-1, keepdim=True)
-                            .clamp(min=1.0)
-                        )
+                        q_for_std = q_centered.clone()
+                        q_for_std[~adj] = 0.0
+                        n_adj = adj.float().sum(dim=-1, keepdim=True)
+                        q_mean = q_for_std.sum(dim=-1, keepdim=True) / n_adj
+                        q_var = ((q_for_std - q_mean) * adj.float()).pow(2).sum(
+                            dim=-1, keepdim=True
+                        ) / n_adj
+                        q_std = q_var.sqrt().clamp(min=1.0)
                         q_norm = q_centered / q_std
 
                         # Soft targets via softmin
