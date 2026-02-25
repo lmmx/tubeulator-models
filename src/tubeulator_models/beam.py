@@ -556,8 +556,13 @@ def rollout_nexthop(
 
         logits = out["next_station"]  # (B, N)
 
-        # Mask visited stations
+        # Soft-block visited stations
         logits = logits.masked_fill(visited, -1e4)
+
+        # Hard-block non-adjacent moves
+        if adj_mask is not None:
+            adj = adj_mask[current]
+            logits = logits.masked_fill(~adj, float("-inf"))
 
         nxt = logits.argmax(dim=-1)  # (B,)
 
@@ -641,8 +646,14 @@ def beam_rollout_nexthop(
             out = model.decoder(h_c, h_d_exp, current_ids=current_flat)
 
         logits = out["next_station"].view(B, K, N)
-        values = out["value"].view(B, K)  # predicted remaining hops
+        values = out["value"].view(B, K)
+
+        # Visited is a softer penalty — prefers unvisited but allows backtrack
         logits = logits.masked_fill(visited, -1e4)
+
+        # Hard-block non-adjacent — must dominate visited mask
+        adj_for_beam = model.decoder.adj_mask[current_flat].view(B, K, N)
+        logits = logits.masked_fill(~adj_for_beam, float("-inf"))
 
         lp = F.log_softmax(logits, dim=-1)
 

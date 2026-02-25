@@ -415,6 +415,20 @@ def train(cfg: TrainConfig) -> None:
                 for gt in gt_routes:
                     strat_keys.append(min(len(r) for r in gt))
 
+            # Find the inf culprit
+            for b, route in enumerate(all_rollouts):
+                if route[-1] != all_dests_list[b]:
+                    continue
+                for i in range(len(route) - 1):
+                    t = edge_time_matrix[route[i], route[i + 1]].item()
+                    if t == float("inf"):
+                        rprint(
+                            f"  [red]INF EDGE: route {b}, "
+                            f"edge {route[i]}→{route[i+1]}, "
+                            f"stations={stations[route[i]]}→{stations[route[i+1]]}[/]"
+                        )
+                        break
+
             metrics = compute_nexthop_rollout_metrics(
                 all_rollouts,
                 torch.tensor(all_dests_list, device=device),
