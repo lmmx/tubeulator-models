@@ -9,7 +9,7 @@ import io
 import json
 import zipfile
 from pathlib import Path
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import torch
 from rich.console import Console
@@ -23,6 +23,9 @@ from .graph_enriched import build_enriched_graph
 from .models.combined import RouteModel
 from .topology import Topology, build_adj_mask, extract
 
+
+if TYPE_CHECKING:
+    import torch
 
 __all__ = ["load_model", "rollout", "predict_time"]
 
@@ -303,8 +306,6 @@ def resolve_station(name: str, stations: list[str], stop_names: dict[str, str]) 
         extra = f" (+{len(matches) - 10} more)" if len(matches) > 10 else ""
         raise SystemExit(f"Ambiguous station '{name}', matches: {names}{extra}")
 
-    # List a few known names for a helpful error
-    all_names = sorted({v for v in stop_names.values()})
     raise SystemExit(f"Unknown station: '{name}'")
 
 
