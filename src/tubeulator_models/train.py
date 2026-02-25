@@ -1374,7 +1374,7 @@ def _eval_value_primary(
         mae = (v_pred - val_targets).abs().mean().item()
         rmse = ((v_pred - val_targets) ** 2).mean().sqrt().item()
 
-    rprint(f"\n[bold]Value head accuracy:[/]")
+    rprint("\n[bold]Value head accuracy:[/]")
     rprint(f"  MAE:  {mae:.2f} min")
     rprint(f"  RMSE: {rmse:.2f} min")
 
@@ -1441,8 +1441,7 @@ def _eval_value_primary(
             if total_n > 0:
                 avg_d = sum(dij_vals) / len(dij_vals) if dij_vals else float("inf")
                 bucket_parts.append(
-                    f"{lo}-{hi}st:{total_succ / total_n:.0%}"
-                    f" dij={avg_d:.2f}({total_n})"
+                    f"{lo}-{hi}st:{total_succ / total_n:.0%} dij={avg_d:.2f}({total_n})"
                 )
         rprint(f"  stratified: {' | '.join(bucket_parts)}")
 
