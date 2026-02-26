@@ -27,6 +27,7 @@ from .topology import (
     build_edge_time_matrix,
     build_line_station_mask,
     extract,
+    floyd_warshall_line_aware,
     floyd_warshall_times,
     floyd_warshall_with_transfers,
     load_interchange_data,
@@ -335,6 +336,8 @@ def train(cfg: TrainConfig) -> None:
 
     edge_time_matrix = None
     optimal_times = None
+    optimal_times_eval = None
+    q_matrix = None
     if is_nexthop:
         edge_time_matrix = build_edge_time_matrix(topo, stations).to(device)
         lines = nh_ds.lines
@@ -345,19 +348,22 @@ def train(cfg: TrainConfig) -> None:
 
         if ic_path is not None and ic_path.is_file():
             interchange_data = load_interchange_data(ic_path)
-            optimal_times = floyd_warshall_with_transfers(
+            optimal_times, q_matrix, optimal_times_eval = floyd_warshall_line_aware(
                 topo,
                 stations,
                 lines,
                 interchange_data,
                 discount=cfg.transfer_discount,
-            ).to(device)
+            )
+            optimal_times = optimal_times.to(device)
+            q_matrix = q_matrix.to(device)
+            optimal_times_eval = optimal_times_eval.to(device)
             rprint(
-                f"  transfer-aware Floyd-Warshall "
-                f"(discount={cfg.transfer_discount})"
+                f"  line-aware Floyd-Warshall " f"(discount={cfg.transfer_discount})"
             )
         else:
-            optimal_times = floyd_warshall_times(topo, stations).to(device)
+            optimal_times_eval = floyd_warshall_times(topo, stations).to(device)
+            optimal_times = optimal_times_eval
             rprint("  transfer-free Floyd-Warshall (no interchange data)")
 
     if cfg.model_type == "change":
@@ -415,6 +421,7 @@ def train(cfg: TrainConfig) -> None:
             topo,
             edge_time_matrix,
             optimal_times,
+            optimal_times_eval,
             split_gen,
         )
         return
@@ -478,7 +485,7 @@ def train(cfg: TrainConfig) -> None:
                 torch.tensor(all_dests_list, device=device),
                 all_gt,
                 edge_time_matrix=edge_time_matrix,
-                optimal_times=optimal_times,
+                optimal_times=optimal_times_eval,
                 origins=torch.tensor(all_origins_list, device=device),
                 strat_keys=strat_keys,
             )
@@ -542,7 +549,7 @@ def train(cfg: TrainConfig) -> None:
                 torch.tensor(all_dests_bell, device=device),
                 all_gt_bell,
                 edge_time_matrix=edge_time_matrix,
-                optimal_times=optimal_times,
+                optimal_times=optimal_times_eval,
                 origins=torch.tensor(all_origins_bell, device=device),
                 strat_keys=strat_keys_bell,
             )
@@ -584,7 +591,9 @@ def train(cfg: TrainConfig) -> None:
                 combined = torch.cat([h_o, h_d], dim=-1)
                 v_pred = raw_model.decoder.value_head(combined).squeeze(-1)
                 # Floyd-Warshall ground truth: remaining time from origin to dest in minutes
-                v_true = optimal_times[o_samp.cpu(), d_samp.cpu()].to(device) / 60.0
+                v_true = (
+                    optimal_times_eval[o_samp.cpu(), d_samp.cpu()].to(device) / 60.0
+                )
                 mae = (v_pred - v_true).abs().mean().item()
                 rmse = ((v_pred - v_true) ** 2).mean().sqrt().item()
                 rprint(f"  MAE:  {mae:.2f} min")
@@ -641,6 +650,8 @@ def train(cfg: TrainConfig) -> None:
             star="",
         )
 
+    N = n_stations
+
     with Progress(*progress_columns, refresh_per_second=4) as progress:
         epoch_task = progress.add_task("Training", total=cfg.epochs, **task_fields)
 
@@ -674,11 +685,24 @@ def train(cfg: TrainConfig) -> None:
                         raw_logits = logits["next_station"]  # (B, N)
                         adj = model.decoder.adj_mask[currents]  # (B, N)
 
-                        # Q(n) = edge_time(current, n) + shortest_remaining(n, dest)
-                        q = (
-                            edge_time_matrix[currents] + optimal_times[:, dests_b].T
-                        )  # (B, N) in seconds
+                        # Line-aware Q: accounts for transfer at arrival station
+                        if q_matrix is not None:
+                            q = q_matrix[currents]  # (B, N, N)
+                            q = q.gather(
+                                2, dests_b.view(-1, 1, 1).expand(-1, n_stations, 1)
+                            ).squeeze(-1)  # (B, N)
+                        else:
+                            q = edge_time_matrix[currents] + optimal_times[:, dests_b].T
                         q = q.masked_fill(~adj, float("inf"))
+
+                        # Self-loops and missing expanded-graph entries produce inf
+                        # at adj-True positions. Replace with worst-neighbour + 10min
+                        # so they're strongly disfavoured but don't poison normalization.
+                        adj_inf = adj & q.isinf()
+                        if adj_inf.any():
+                            q_finite = q.masked_fill(q.isinf(), 0.0)
+                            q_max = q_finite.max(dim=-1, keepdim=True).values  # (B, 1)
+                            q = torch.where(adj_inf, q_max + 600.0, q)
 
                         # Center and normalize per sample
                         q_min = q.min(dim=-1, keepdim=True).values
@@ -818,7 +842,7 @@ def train(cfg: TrainConfig) -> None:
                         torch.tensor(all_dests_list, device=device),
                         all_gt,
                         edge_time_matrix=edge_time_matrix,
-                        optimal_times=optimal_times,
+                        optimal_times=optimal_times_eval,
                         origins=torch.tensor(all_origins_list, device=device),
                         strat_keys=strat_keys,
                     )
@@ -1077,6 +1101,7 @@ def _train_value_primary(
     topo,
     edge_time_matrix: torch.Tensor,
     optimal_times: torch.Tensor,
+    optimal_times_eval: torch.Tensor,
     split_gen: torch.Generator,
 ) -> None:
     """
@@ -1191,6 +1216,7 @@ def _train_value_primary(
             val_od,
             edge_time_matrix,
             optimal_times,
+            optimal_times_eval,
             n_stations,
             stations,
             cfg,
@@ -1314,7 +1340,7 @@ def _train_value_primary(
                     torch.tensor(all_dests_l, device=device),
                     all_gt,
                     edge_time_matrix=edge_time_matrix,
-                    optimal_times=optimal_times,
+                    optimal_times=optimal_times_eval,
                     origins=torch.tensor(all_origins_l, device=device),
                     strat_keys=strat_keys,
                 )
@@ -1400,6 +1426,7 @@ def _eval_value_primary(
     val_od,
     edge_time_matrix,
     optimal_times,
+    optimal_times_eval,
     n_stations,
     stations,
     cfg,
@@ -1466,7 +1493,7 @@ def _eval_value_primary(
         torch.tensor(all_dests_l, device=device),
         all_gt,
         edge_time_matrix=edge_time_matrix,
-        optimal_times=optimal_times,
+        optimal_times=optimal_times_eval,
         origins=torch.tensor(all_origins_l, device=device),
         strat_keys=strat_keys,
     )

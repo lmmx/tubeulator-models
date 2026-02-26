@@ -3,7 +3,7 @@ profile = "dev"
 default_model = "change"
 eval_only = false
 value_primary = false
-transfer_discount = 0.65
+transfer_discount = 1.5
 
 # ── Encoder ───────────────────────────────────────────────────
 d_model = 128
@@ -113,4 +113,4 @@ beam_eval_interval = 25
 batch_size = 4096
 lr = 3e-4
 epochs = 80
-n_enc_layers = 15
+n_enc_layers = 16

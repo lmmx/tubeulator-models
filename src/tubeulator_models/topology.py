@@ -268,6 +268,81 @@ def build_edge_time_matrix(topo: Topology, stations: list[str]) -> torch.Tensor:
     return matrix
 
 
+def build_transfer_lookup(
+    topo: Topology,
+    stations: list[str],
+    interchange_data: list[dict],
+    discount: float = 0.65,
+    default_transfer_s: float = 240.0,
+) -> dict[tuple[str, str, str], float]:
+    """(stop_id, from_route_id, to_route_id) → transfer cost in seconds.
+
+    Uses the same station/line matching and discount as
+    ``floyd_warshall_with_transfers``.  Provides a discounted default
+    for interchange line pairs not covered by the dataset.
+    """
+    # Reverse: human line name → route_id
+    name_to_route: dict[str, str] = {}
+    for route_id, human in topo.route_names.items():
+        name_to_route[human] = route_id
+
+    # Normalized station name → stop_id
+    name_to_sid: dict[str, str] = {}
+    for stop_id in stations:
+        raw = topo.stop_names.get(stop_id, "")
+        if raw:
+            name_to_sid[_normalize_station_name(raw)] = stop_id
+
+    lookup: dict[tuple[str, str, str], float] = {}
+
+    for sd in interchange_data:
+        raw_name = sd.get("station", "")
+        norm = _normalize_station_name(raw_name)
+        norm = _IC_STATION_ALIASES.get(norm, norm)
+        stop_id = name_to_sid.get(norm)
+        if stop_id is None:
+            continue
+
+        for ic in sd.get("interchanges", []):
+            mins = ic.get("minutes")
+            if mins is None:
+                continue
+            if ic.get("branch_interchange") or "cross_station" in ic:
+                continue
+
+            from_name = ic.get("from_line", "")
+            to_name = ic.get("to_line", "")
+            if not from_name or not to_name:
+                continue
+
+            from_rid = name_to_route.get(from_name)
+            to_rid = name_to_route.get(to_name)
+            if from_rid is None or to_rid is None:
+                continue
+
+            cost_s = mins * 60.0 * discount
+
+            key = (stop_id, from_rid, to_rid)
+            if key not in lookup or cost_s < lookup[key]:
+                lookup[key] = cost_s
+            rev = (stop_id, to_rid, from_rid)
+            if rev not in lookup or cost_s < lookup[rev]:
+                lookup[rev] = cost_s
+
+    # Default for interchange pairs absent from the dataset
+    default_cost = default_transfer_s * discount
+    for stop_id in stations:
+        serving = topo.station_lines.get(stop_id, set())
+        if len(serving) < 2:
+            continue
+        for l1 in serving:
+            for l2 in serving:
+                if l1 != l2 and (stop_id, l1, l2) not in lookup:
+                    lookup[(stop_id, l1, l2)] = default_cost
+
+    return lookup
+
+
 def floyd_warshall_times(topo: Topology, stations: list[str]) -> torch.Tensor:
     """(N, N) all-pairs shortest travel time in seconds.
 
@@ -739,3 +814,246 @@ def floyd_warshall_with_transfers(
     print(f"  {off_diag - n_inf} reachable OD pairs, {n_inf} unreachable")
 
     return projected
+
+
+def floyd_warshall_line_aware(
+    topo: Topology,
+    stations: list[str],
+    lines: list[str],
+    interchange_data: list[dict],
+    discount: float = 0.65,
+    default_transfer_s: float = 240.0,
+) -> tuple["torch.Tensor", "torch.Tensor", "torch.Tensor"]:
+    """Line-aware shortest paths for Q-value computation.
+
+    Returns:
+        optimal_projected: (N, N) station-level shortest times
+            (same as floyd_warshall_with_transfers)
+        q_matrix: (N, N, N) tensor where q_matrix[s, n, d] =
+            min over lines serving edge (s,n) of
+            edge_time_l(s,n) + FW[(n, l_arrival), (d, best_l)]
+            Only valid where n is adjacent to s.
+        optimal_eval: (N, N) transfer-free shortest times
+            for evaluation metrics.
+    """
+    import torch
+
+    N = len(stations)
+    L = len(lines)
+    st2i = {s: i for i, s in enumerate(stations)}
+    ln2i = {ln: i for i, ln in enumerate(lines)}
+
+    # ── Build expanded graph (reuse logic from floyd_warshall_with_transfers)
+    # We need the full expanded FW matrix, not just the projection.
+    # Call the existing function's internals but keep the pre-projection matrix.
+
+    # First, get the transfer-free baseline
+    optimal_eval = floyd_warshall_times(topo, stations)
+
+    # Build expanded graph identically to floyd_warshall_with_transfers
+    valid_nodes: list[tuple[int, int]] = []
+    node_idx: dict[tuple[int, int], int] = {}
+    for si, station_id in enumerate(stations):
+        for line_id in topo.station_lines.get(station_id, set()):
+            li = ln2i.get(line_id)
+            if li is not None:
+                node_idx[(si, li)] = len(valid_nodes)
+                valid_nodes.append((si, li))
+
+    M = len(valid_nodes)
+
+    # Slug resolution for interchange data
+    slug_to_routes: dict[str, list[str]] = defaultdict(list)
+    for route_id in lines:
+        slug_to_routes[route_id.lower()].append(route_id)
+        name = topo.route_names.get(route_id, "")
+        if name:
+            slug = _slugify_line(name)
+            if route_id not in slug_to_routes[slug]:
+                slug_to_routes[slug].append(route_id)
+
+    def _resolve_slug_local(slug: str) -> list[int]:
+        routes = slug_to_routes.get(slug, [])
+        return [ln2i[r] for r in routes if r in ln2i]
+
+    # Station matching
+    name_to_idx: dict[str, int] = {}
+    for si, stop_id in enumerate(stations):
+        raw = topo.stop_names.get(stop_id, "")
+        if raw:
+            name_to_idx[_normalize_station_name(raw)] = si
+
+    def _match_local(sd: dict) -> int | None:
+        raw = sd.get("station", "")
+        if raw:
+            norm = _normalize_station_name(raw)
+            norm = _IC_STATION_ALIASES.get(norm, norm)
+            if norm in name_to_idx:
+                return name_to_idx[norm]
+        return None
+
+    # Parse transfer costs
+    transfer_cost: dict[tuple[int, int, int], float] = {}
+    default_cost = default_transfer_s * discount
+
+    for sd in interchange_data:
+        si = _match_local(sd)
+        if si is None:
+            continue
+        for ic in sd.get("interchanges", []):
+            mins = ic.get("minutes")
+            if mins is None:
+                continue
+            cost_s = mins * 60.0 * discount
+            if ic.get("branch_interchange") or "cross_station" in ic:
+                continue
+            from_name = ic.get("from_line_slug") or ic.get("from_line", "")
+            to_name = ic.get("to_line_slug") or ic.get("to_line", "")
+            if not from_name or not to_name:
+                continue
+            from_slug = _slugify_line(from_name)
+            to_slug = _slugify_line(to_name)
+            from_lis = _resolve_slug_local(from_slug)
+            to_lis = _resolve_slug_local(to_slug)
+            if not from_lis:
+                direct = from_name.lower().strip()
+                if direct in ln2i:
+                    from_lis = [ln2i[direct]]
+            if not to_lis:
+                direct = to_name.lower().strip()
+                if direct in ln2i:
+                    to_lis = [ln2i[direct]]
+            for lf in from_lis:
+                for lt in to_lis:
+                    if lf != lt:
+                        key = (si, lf, lt)
+                        if key not in transfer_cost or cost_s < transfer_cost[key]:
+                            transfer_cost[key] = cost_s
+
+    # Symmetrize
+    reverse = {}
+    for (si, lf, lt), cost in transfer_cost.items():
+        rev = (si, lt, lf)
+        if rev not in transfer_cost:
+            reverse[rev] = cost
+    transfer_cost.update(reverse)
+
+    # Build expanded adjacency matrix
+    matrix = torch.full((M, M), float("inf"))
+    matrix.fill_diagonal_(0.0)
+
+    for line_id, edges in topo.edge_time.items():
+        li = ln2i.get(line_id)
+        if li is None:
+            continue
+        for (s1, s2), t in edges.items():
+            si, sj = st2i.get(s1), st2i.get(s2)
+            if si is None or sj is None:
+                continue
+            ni = node_idx.get((si, li))
+            nj = node_idx.get((sj, li))
+            if ni is not None and nj is not None:
+                if t < matrix[ni, nj].item():
+                    matrix[ni, nj] = t
+
+    for line_id, adj in topo.line_adj.items():
+        li = ln2i.get(line_id)
+        if li is None:
+            continue
+        for station, neighbors in adj.items():
+            si = st2i.get(station)
+            if si is None:
+                continue
+            ni = node_idx.get((si, li))
+            if ni is None:
+                continue
+            for nb in neighbors:
+                sj = st2i.get(nb)
+                if sj is None:
+                    continue
+                nj = node_idx.get((sj, li))
+                if nj is not None and matrix[ni, nj].item() == float("inf"):
+                    matrix[ni, nj] = 120.0
+
+    for station_id in topo.interchanges:
+        si = st2i.get(station_id)
+        if si is None:
+            continue
+        serving = [
+            ln2i[ln] for ln in topo.station_lines.get(station_id, set()) if ln in ln2i
+        ]
+        for lf in serving:
+            for lt in serving:
+                if lf == lt:
+                    continue
+                ni = node_idx.get((si, lf))
+                nj = node_idx.get((si, lt))
+                if ni is None or nj is None:
+                    continue
+                cost = transfer_cost.get((si, lf, lt), default_cost)
+                if cost < matrix[ni, nj].item():
+                    matrix[ni, nj] = cost
+
+    # Floyd-Warshall
+    through_k = torch.empty(M, M)
+    for k in range(M):
+        torch.add(
+            matrix[:, k].unsqueeze(1),
+            matrix[k, :].unsqueeze(0),
+            out=through_k,
+        )
+        torch.minimum(matrix, through_k, out=matrix)
+
+    # ── Project: FW_start[(station, line), dest_station]
+    # For each expanded node (si, li) and each destination station dj,
+    # find the shortest time minimising over arrival lines at dj.
+    station_nodes: list[list[int]] = [[] for _ in range(N)]
+    for ni, (si, _) in enumerate(valid_nodes):
+        station_nodes[si].append(ni)
+
+    # fw_start_line: (M, N) — from expanded node to station
+    fw_start_line = torch.full((M, N), float("inf"))
+    for dj in range(N):
+        dest_nodes = station_nodes[dj]
+        if dest_nodes:
+            fw_start_line[:, dj] = matrix[:, dest_nodes].min(dim=1).values
+
+    # ── Build Q-matrix: (N, N, N) — q[s, n, d]
+    # For each station s, for each adjacent n, for each dest d:
+    # Q = min over lines serving (s,n) of edge_time_l(s,n) + fw_start_line[(n,l), d]
+    q_matrix = torch.full((N, N, N), float("inf"))
+
+    for line_id, adj in topo.line_adj.items():
+        li = ln2i.get(line_id)
+        if li is None:
+            continue
+        for station, neighbors in adj.items():
+            si = st2i.get(station)
+            if si is None:
+                continue
+            for nb in neighbors:
+                sj = st2i.get(nb)
+                if sj is None:
+                    continue
+                ni_arrival = node_idx.get((sj, li))
+                if ni_arrival is None:
+                    continue
+                edge_t = topo.edge_time.get(line_id, {}).get((station, nb), 120.0)
+                # Q(s, n, d) for this line = edge_time + fw_start_line[(n, l), d]
+                candidate = edge_t + fw_start_line[ni_arrival]  # (N,)
+                q_matrix[si, sj] = torch.minimum(q_matrix[si, sj], candidate)
+
+    # ── Also produce the standard station projection
+    projected = torch.full((N, N), float("inf"))
+    for s1 in range(N):
+        n1 = station_nodes[s1]
+        if not n1:
+            continue
+        min_from = matrix[n1].min(dim=0).values
+        for s2 in range(N):
+            n2 = station_nodes[s2]
+            if n2:
+                projected[s1, s2] = min_from[n2].min()
+    projected.fill_diagonal_(0.0)
+
+    return projected, q_matrix, optimal_eval
