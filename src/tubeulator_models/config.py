@@ -42,6 +42,7 @@ class TrainConfig(BaseModel):
     label_smoothing: float
     scheduled_sampling: float
     value_primary: bool
+    transfer_discount: float
 
     # ── inference ─────────────────────────────────────────────
     beam_width: int

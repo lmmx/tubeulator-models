@@ -26,13 +26,13 @@ model-index:
             value: 0.9986431478968792
           - type: custom
             name: Dijkstra Ratio
-            value: 1.0025098262841567
+            value: 1.044379105846017
           - type: custom
             name: Step Accuracy
-            value: 0.2944134762633997
+            value: 0.8701745788667687
           - type: custom
             name: Length Ratio
-            value: 0.9875826345944488
+            value: 1.0280089166686708
 ---
 
 # Tube Next-Hop Policy
@@ -42,7 +42,7 @@ decisions on the London Underground graph. Given a current station and a
 destination, the model outputs a probability distribution over adjacent
 stations.
 
-Greedy rollout achieves **1.00× Dijkstra ratio** (optimal
+Greedy rollout achieves **1.04× Dijkstra ratio** (optimal
 shortest travel time) with **99.9% success rate** across all
 73,712 origin–destination pairs.
 
@@ -61,10 +61,10 @@ graph-attention-based policy learning.
 
 | Component | Details |
 |---|---|
-| Encoder | 15-layer GATv2, d=512, 8 heads |
+| Encoder | 16-layer GATv2, d=512, 8 heads |
 | Decoder | 3-layer MLP with adjacency masking |
 | Graph | 272 stations, 11 lines, 900 directed edges |
-| Parameters | 9,457,425 |
+| Parameters | 9,990,929 |
 | Training signal | KL divergence vs. Q-soft targets from Floyd–Warshall |
 | Label smoothing | 0.1 |
 | Scheduled sampling | 0.5 |
@@ -77,11 +77,11 @@ steps), with greedy rollout to completion.
 | Metric | Value |
 |---|---|
 | Rollout success rate | 99.9% |
-| Dijkstra ratio (travel time vs. optimal) | 1.00 |
-| Step accuracy (single-step top-1) | 29.4% |
-| Length ratio (hops vs. optimal hops) | 0.99 |
+| Dijkstra ratio (travel time vs. optimal) | 1.04 |
+| Step accuracy (single-step top-1) | 87.0% |
+| Length ratio (hops vs. optimal hops) | 1.03 |
 
-> **Note on step accuracy:** The 29.4% top-1 step accuracy reflects
+> **Note on step accuracy:** The 87.0% top-1 step accuracy reflects
 > that many nodes have multiple equally-optimal next hops. The model distributes
 > probability across these alternatives, which is correct behavior — the
 > rollout metrics confirm optimal routing.
@@ -100,7 +100,7 @@ Floyd–Warshall all-pairs shortest paths provide the Q-value supervision signal
 
 - Optimizer: AdamW, lr=3e-04
 - Compiled with `torch.compile(mode='default')`
-- Training time: ~15 minutes
+- Training time: ~17 minutes
 - Hardware: single GPU
 
 ## Limitations

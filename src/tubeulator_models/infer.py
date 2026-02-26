@@ -18,10 +18,16 @@ from rich.text import Text
 from safetensors.torch import load_file
 
 from .config import TrainConfig
-from .defaults import resolve_hub
+from .defaults import repo_root, resolve_data, resolve_hub
 from .graph_enriched import build_enriched_graph
 from .models.combined import RouteModel
-from .topology import Topology, build_adj_mask, extract
+from .topology import (
+    Topology,
+    build_adj_mask,
+    build_transfer_lookup,
+    extract,
+    load_interchange_data,
+)
 
 
 if TYPE_CHECKING:
@@ -60,6 +66,7 @@ class LoadedModel(NamedTuple):
     adj: torch.Tensor
     H: torch.Tensor  # precomputed encoder output
     topo: Topology | None  # for line attribution
+    transfer_lookup: dict[tuple[str, str, str], float] | None
 
 
 def _download(repo: str, filename: str) -> Path:
@@ -146,6 +153,20 @@ def _load_from_checkpoint(variant: str, profile: str = "full") -> LoadedModel:
 
     n_params = sum(p.numel() for p in model.parameters())
 
+    # Build transfer cost lookup for display
+    data_cfg = resolve_data()
+    ic_rel = data_cfg.get("interchange_path", "")
+    ic_path = repo_root() / ic_rel if ic_rel else None
+    transfer_lookup = None
+    if ic_path is not None and ic_path.is_file():
+        ic_data = load_interchange_data(ic_path)
+        transfer_lookup = build_transfer_lookup(
+            topo,
+            stations,
+            ic_data,
+            discount=1.0,  # cfg.transfer_discount,
+        )
+
     with torch.no_grad():
         H = model.encoder(graph.x, graph.edge_index, graph.edge_attr)
 
@@ -162,6 +183,7 @@ def _load_from_checkpoint(variant: str, profile: str = "full") -> LoadedModel:
         adj=adj,
         H=H,
         topo=topo,
+        transfer_lookup=transfer_lookup,
     )
 
 
@@ -239,6 +261,7 @@ def _load_from_export(source: str | Path) -> LoadedModel:
         adj=adj,
         H=H,
         topo=None,
+        transfer_lookup=None,
     )
 
 
@@ -489,41 +512,59 @@ def _compute_cumulative_times(
     segments: list[tuple[str | None, list[str]]],
     stations: list[str],
     topo: Topology,
-) -> tuple[list[float], list[bool]]:
+    transfer_lookup: dict[tuple[str, str, str], float] | None = None,
+) -> tuple[list[float], list[bool], list[float]]:
     """
-    Cumulative travel time in seconds at each station, plus estimated flags.
-
-    Returns (cum_times, is_estimated) where is_estimated[i] is True
-    if the edge arriving at station i used the 120s fallback.
+    Returns (cumulative_seconds, estimated_flags, transfer_seconds_per_hop).
     """
     cum = [0.0]
-    estimated = [False]  # origin is never estimated
+    estimated = [False]
+    transfers = [0.0]  # one per station, index 0 = origin
+
+    prev_line: str | None = None
 
     for i, (line_id, _alts) in enumerate(segments):
         from_sid = stations[path[i]]
         to_sid = stations[path[i + 1]]
 
+        transfer_t = 0.0
+
+        # Transfer penalty when line changes
+        if prev_line is not None and line_id is not None and line_id != prev_line:
+            transfer_station = stations[path[i]]
+            if transfer_lookup is not None:
+                transfer_t = transfer_lookup.get(
+                    (transfer_station, prev_line, line_id), 0.0
+                )
+
         if line_id:
-            t = topo.travel_time(line_id, from_sid, to_sid)
-            # Check if this is a real observed time or the 120s fallback
+            edge_t = topo.travel_time(line_id, from_sid, to_sid)
             real = (from_sid, to_sid) in topo.edge_time.get(line_id, {})
         else:
-            t = 120.0
+            edge_t = 120.0
             real = False
 
-        cum.append(cum[-1] + t)
+        cum.append(cum[-1] + transfer_t + edge_t)
         estimated.append(not real)
+        transfers.append(transfer_t)
+        prev_line = line_id
 
-    return cum, estimated
+    return cum, estimated, transfers
 
 
 def _render_route(path: list[int], success: bool, lm: LoadedModel) -> None:
     has_lines = lm.topo is not None and len(path) >= 2
     segments = _assign_lines(path, lm.stations, lm.topo) if has_lines else []
-    cum_times, estimated = (
-        _compute_cumulative_times(path, segments, lm.stations, lm.topo)
+    cum_times, estimated, transfer_times = (
+        _compute_cumulative_times(
+            path,
+            segments,
+            lm.stations,
+            lm.topo,
+            transfer_lookup=lm.transfer_lookup,
+        )
         if has_lines
-        else ([], [])
+        else ([], [], [])
     )
 
     table = Table(
@@ -556,7 +597,11 @@ def _render_route(path: list[int], success: bool, lm: LoadedModel) -> None:
             if cum_times:
                 mins = cum_times[i] / 60.0
                 marker = "*" if estimated[i] else " "
-                time_str = f"{marker}{mins:.1f}m"
+                xfer = transfer_times[i] if i < len(transfer_times) else 0.0
+                if xfer > 0:
+                    time_str = f"(+{xfer / 60:.1f}m) {marker}{mins:.1f}m"
+                else:
+                    time_str = f"{marker}{mins:.1f}m"
             else:
                 time_str = ""
 

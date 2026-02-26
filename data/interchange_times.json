@@ -1,0 +1,6420 @@
+[
+  {
+    "station": "Abbey Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Acton Central",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Acton Town",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "District <> Piccadilly line",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Aldgate",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and Metropolitan line trains",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Aldgate East",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between District and Hammersmith & City line trains",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "All Saints",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Alperton",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Amersham",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Metropolitan and Chiltern Railways",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Anerley",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 3
+      },
+      {
+        "line": "Southern",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Angel",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Archway",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Arnos Grove",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Arsenal",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Baker Street",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo, Jubilee",
+        "minutes": 7
+      },
+      {
+        "line": "Circle, Hammersmith & City, Metropolitan",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Circle",
+        "minutes": 8
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Hammersmith & City",
+        "minutes": 8
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Jubilee",
+        "minutes": 2
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Metropolitan",
+        "minutes": 3
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Hammersmith & City",
+        "minutes": 2
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Jubilee",
+        "minutes": 8
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Metropolitan",
+        "minutes": 8
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Jubilee",
+        "minutes": 8
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Metropolitan",
+        "minutes": 5
+      },
+      {
+        "from_line": "Jubilee",
+        "to_line": "Metropolitan",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Balham",
+    "gate_to_platform": [
+      {
+        "line": "Northern",
+        "minutes": 2
+      },
+      {
+        "line": "Southern",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Northern",
+        "to_line": "National Rail",
+        "minutes": 8
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "National Rail",
+        "minutes": 8
+      }
+    ]
+  },
+  {
+    "station": "Bank, including Monument interchange values",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 3.5
+      },
+      {
+        "line": "DLR",
+        "minutes": 4.5
+      },
+      {
+        "line": "Northern",
+        "minutes": 5.5
+      },
+      {
+        "line": "Waterloo & City",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "Circle",
+        "minutes": 7
+      },
+      {
+        "from_line": "Central",
+        "to_line": "District",
+        "minutes": 7
+      },
+      {
+        "from_line": "Central",
+        "to_line": "DLR",
+        "minutes": 3
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Northern",
+        "minutes": 4
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Waterloo & City",
+        "minutes": 4.5
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "DLR",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Northern",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Waterloo & City",
+        "minutes": 10
+      },
+      {
+        "from_line": "District",
+        "to_line": "DLR",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "Northern",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "Waterloo & City",
+        "minutes": 10
+      },
+      {
+        "from_line": "DLR",
+        "to_line": "Northern",
+        "minutes": 3
+      },
+      {
+        "from_line": "DLR",
+        "to_line": "Waterloo & City",
+        "minutes": 6
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "Waterloo & City",
+        "minutes": 7
+      }
+    ]
+  },
+  {
+    "station": "Barbican",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      },
+      {
+        "line": null,
+        "minutes": 1
+      },
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Circle",
+        "to_line": "Hammersmith & City",
+        "minutes": 2
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Metropolitan",
+        "minutes": 2
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Metropolitan",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Barking",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 2
+      },
+      {
+        "line": "National Rail (c2c)",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "District",
+        "to_line": "c2c",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "Hammersmith & City",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "London Overground",
+        "minutes": 4
+      },
+      {
+        "from_line": "C2C",
+        "to_line": "Hammersmith & City",
+        "minutes": 4
+      },
+      {
+        "from_line": "C2C",
+        "to_line": "London Overground",
+        "minutes": 4
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Hammersmith & City",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Barkingside",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Barons Court",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between District and Piccadilly line trains",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Bayswater",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and District line trains",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Beckton",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Beckton Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Becontree",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Belsize Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 5
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Bermondsey",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Bethnal Green, London Underground",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Blackfriars",
+    "gate_to_platform": [
+      {
+        "note": "Underground station closed \u2013 to be reassessed on reopening"
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Blackhorse Road",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 3
+      },
+      {
+        "line": "Victoria",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "London Overground",
+        "to_line": "Victoria",
+        "minutes": 6
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Victoria",
+        "minutes": 6
+      }
+    ]
+  },
+  {
+    "station": "Blackwall",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Bond Street",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 4
+      },
+      {
+        "line": "Jubilee",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "Jubilee",
+        "minutes": 4
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Jubilee",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Borough",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Boston Manor",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Bounds Green",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Bow Church",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "note": "Step-free access via lift (one on each platform)"
+      }
+    ]
+  },
+  {
+    "station": "Bow Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "District",
+        "to_line": "Hammersmith & City",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Brent Cross",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Brixton London Underground",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Brockley",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 2
+      },
+      {
+        "line": "Southern",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Bromley-By-Bow",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "District",
+        "to_line": "Hammersmith & City",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Brondesbury",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Brondesbury Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Buckhurst Hill",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Burnt Oak",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Bushey",
+    "gate_to_platform": [
+      {
+        "line": "London Midland",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "London Overground",
+        "to_line": "London Midland",
+        "minutes": 4
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "London Midland",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Caledonian Road London Underground",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Caledonian Road & Barnsbury",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Camden Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Camden Town",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Interchange between branches",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Canada Water",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 2
+      },
+      {
+        "line": "Jubilee",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Jubilee",
+        "to_line": "London Overground",
+        "minutes": 2.5
+      },
+      {
+        "from_line": "Jubilee",
+        "to_line": "London Overground",
+        "minutes": 2.5
+      }
+    ]
+  },
+  {
+    "station": "Canary Wharf DLR",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Canary Wharf London Underground",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Interchange with Heron Quays DLR",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Canning Town",
+    "gate_to_platform": [
+      {
+        "line": "DLR",
+        "minutes": 3
+      },
+      {
+        "line": "Jubilee line",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "DLR",
+        "to_line": "Jubilee",
+        "minutes": 4
+      },
+      {
+        "route": "DLR between branches",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Cannon Street",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      },
+      {
+        "line": null,
+        "minutes": 2
+      },
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 3
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "National Rail",
+        "minutes": 7
+      },
+      {
+        "from_line": "District",
+        "to_line": "National Rail",
+        "minutes": 7
+      }
+    ]
+  },
+  {
+    "station": "Canonbury",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Canons Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Carpenders Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Chalfont & Latimer",
+    "gate_to_platform": [
+      {
+        "line": "Chiltern",
+        "minutes": 4
+      },
+      {
+        "line": "Metropolitan",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Chiltern",
+        "to_line": "Metropolitan",
+        "minutes": 4
+      },
+      {
+        "from_line": "Chiltern",
+        "to_line": "Metropolitan",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Chalk Farm",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Chancery Lane",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Charing Cross",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 7
+      },
+      {
+        "line": "Northern",
+        "minutes": 7
+      },
+      {
+        "line": "National Rail",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Northern",
+        "minutes": 7
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "National Rail",
+        "minutes": 10
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "National Rail",
+        "minutes": 7
+      }
+    ]
+  },
+  {
+    "station": "Chesham",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Chigwell",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Chiswick Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Chorleywood",
+    "gate_to_platform": [
+      {
+        "line": "Chiltern Railways",
+        "minutes": 2
+      },
+      {
+        "line": "Metropolitan",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Chiltern Railways",
+        "to_line": "Metropolitan",
+        "minutes": 3
+      },
+      {
+        "from_line": "Chiltern Railways",
+        "to_line": "Metropolitan",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Clapham Common",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Clapham Junction",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 6
+      },
+      {
+        "line": "Southern",
+        "minutes": 6
+      },
+      {
+        "line": "South West Trains (Richmond line)",
+        "minutes": 5
+      },
+      {
+        "line": "South West Trains (Wimbledon line)",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 4
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "South West Trains (Richmond)",
+        "minutes": 5
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "South West Trains (Wimbledon)",
+        "minutes": 5
+      },
+      {
+        "from_line": "Southern",
+        "to_line": "South West Trains (Richmond)",
+        "minutes": 4
+      },
+      {
+        "from_line": "Southern",
+        "to_line": "South West Trains (Wimbledon)",
+        "minutes": 3
+      },
+      {
+        "from_line": "South West Trains (Richmond)",
+        "to_line": "South West Trains (Wimbledon)",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Covent Garden",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Crossharbour",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Crouch Hill",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Croxley",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Crystal Palace",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 2
+      },
+      {
+        "line": "Southern",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 4
+      },
+      {
+        "route": "Southern, between branches",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Custom House (for ExCel)",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Cutty Sark",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Cyprus",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      },
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Dagenham East",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Dagenham Heathway",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Dalston Junction",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Dalston Kingsland",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Debden",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Deptford Bridge",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Devons Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Dollis Hill",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Ealing Broadway",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "First Great Western",
+        "minutes": 3
+      },
+      {
+        "line": "Heathrow Connect",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "District",
+        "minutes": 4
+      },
+      {
+        "from_line": "Central",
+        "to_line": "First Great Western",
+        "minutes": 5
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Heathrow Connect",
+        "minutes": 5
+      },
+      {
+        "from_line": "District",
+        "to_line": "First Great Western",
+        "minutes": 5
+      },
+      {
+        "from_line": "District",
+        "to_line": "Heathrow Connect",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Ealing Common",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between District and Piccadilly line",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between District and Piccadilly line",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Earls Court",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between District and Piccadilly line",
+        "minutes": 3
+      },
+      {
+        "route": "Connections between District and Piccadilly line",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "East Acton",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Eastcote",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Metropolitan and Piccadilly line",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "East Finchley",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "East Ham",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between District and Hammersmith & City line",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "East India",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "East Putney",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Edgware",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Edgware Road Bakerloo",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Edgware Road Circle",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between District, Hammersmith & City Circle line trains",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Elephant & Castle London Underground",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 5
+      },
+      {
+        "line": "Northern",
+        "minutes": 7
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Northern",
+        "minutes": 2
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Northern",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Elm Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Elverson Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "note": "Step-free level access available"
+      }
+    ]
+  },
+  {
+    "station": "Embankment",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 5
+      },
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Northern",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Circle",
+        "minutes": 5
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "District",
+        "minutes": 5
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Northern",
+        "minutes": 5
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Northern",
+        "minutes": 5
+      },
+      {
+        "from_line": "District",
+        "to_line": "Northern",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Epping",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Euston",
+    "gate_to_platform": [
+      {
+        "line": "Northern",
+        "minutes": 5
+      },
+      {
+        "line": "Victoria",
+        "minutes": 4
+      },
+      {
+        "line": "London Overground/NR (from concourse)",
+        "minutes": 7
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Northern",
+        "to_line": "Victoria",
+        "minutes": 5
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "London Overground/NR",
+        "minutes": 10
+      },
+      {
+        "from_line": "Victoria",
+        "to_line": "London Overground/NR",
+        "minutes": 9
+      }
+    ]
+  },
+  {
+    "station": "Euston Square",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Metropolitan, Hammersmith & City, Circle line trains",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Fairlop",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Farringdon",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 2
+      },
+      {
+        "line": "Metropolitan",
+        "minutes": 2
+      },
+      {
+        "line": "First  Capital Connect",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Metropolitan, Hammersmith & City and Circle line trains",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Metropolitan, Hammersmith & City and Circle line trains and First Capital Connect",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Finchley Central",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between High Barnet and trains terminating at Mill Hill East",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Finchley Road",
+    "gate_to_platform": [
+      {
+        "line": "Jubilee",
+        "minutes": 1.5
+      },
+      {
+        "line": "Metropolitan",
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Jubilee and Metropolitan line trains",
+        "minutes": 3
+      },
+      {
+        "route": "Connections between Jubilee and Metropolitan line trains",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Finchley Road & Frognal",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Finsbury Park",
+    "gate_to_platform": [
+      {
+        "line": "Piccadilly",
+        "minutes": 2
+      },
+      {
+        "line": "Victoria",
+        "minutes": 2
+      },
+      {
+        "line": "First Capital Connect",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Piccadilly and Victoria line trains",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Piccadilly and First Capital Connect",
+        "minutes": 5
+      },
+      {
+        "route": "Connections between Victoria and First Capital Connect",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Forest Hill",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 4
+      },
+      {
+        "line": "Southern",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Fulham Broadway",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Gallions Reach",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Gants Hill",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Gloucester Road",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Piccadilly",
+        "minutes": 7
+      },
+      {
+        "from_line": "District",
+        "to_line": "Piccadilly",
+        "minutes": 7
+      }
+    ]
+  },
+  {
+    "station": "Golders Green",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Goldhawk Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Goodge Street",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 5
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Gospel Oak",
+    "gate_to_platform": [
+      {
+        "line": "London Overground, Barking line",
+        "minutes": 3
+      },
+      {
+        "line": "London Overground, NLL",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Interchange between Barking branch and North London Line",
+        "minutes": 5
+      },
+      {
+        "route": "Interchange between Barking branch and North London Line",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Grange Hill",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Great Portland Street",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Metropolitan, Hammersmith & City and Circle line trains",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Greenford",
+    "gate_to_platform": [
+      {
+        "line": "First Great Western",
+        "minutes": 2
+      },
+      {
+        "line": "First Great Western",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Central line and First Great Western services",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Central line and First Great Western services",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Green Park",
+    "gate_to_platform": [
+      {
+        "line": "Jubilee",
+        "minutes": 5
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 3
+      },
+      {
+        "line": "Victoria",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Jubilee",
+        "to_line": "Piccadilly",
+        "minutes": 5.5
+      },
+      {
+        "from_line": "Jubilee",
+        "to_line": "Victoria",
+        "minutes": 4.5
+      },
+      {
+        "from_line": "Piccadilly",
+        "to_line": "Victoria",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Greenwich",
+    "gate_to_platform": [
+      {
+        "line": "DLR",
+        "minutes": 5.5
+      },
+      {
+        "line": "Southeastern",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "DLR",
+        "to_line": "Southeastern",
+        "minutes": 5
+      },
+      {
+        "from_line": "DLR",
+        "to_line": "Southeastern",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Gunnersbury",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between District line and London Overground services",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between District line and London Overground services",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Hackney Central",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hackney Wick",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Haggerston",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hainault",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hammersmith District and Piccadilly lines",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "District",
+        "to_line": "Piccadilly",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "Piccadilly",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Hammersmith Hammersmith & City line",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hampstead",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 5
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hampstead Heath",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hanger Lane",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Harlesden",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 1.5
+      },
+      {
+        "line": "London Overground",
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Bakerloo line and London Overground services",
+        "minutes": 5
+      },
+      {
+        "route": "Connections between Bakerloo line and London Overground services",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Harringay Green Lanes",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "note": "Step-free access via ramps between street and platforms"
+      }
+    ]
+  },
+  {
+    "station": "Harrow & Wealdstone",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground and all National Rail",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "London Overground and all National Rail",
+        "minutes": 5
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "National Rail",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Harrow-On-The-Hill",
+    "gate_to_platform": [
+      {
+        "line": "Chiltern Railways",
+        "minutes": 2
+      },
+      {
+        "line": "Metropolitan",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Chiltern Railways",
+        "to_line": "Metropolitan",
+        "minutes": 4
+      },
+      {
+        "route": "Metropolitan (different branches)",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Hatton Cross",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Piccadilly (different branches)",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Hatch End",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Headstone Lane",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Heathrow Terminals 123 London Underground",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Piccadilly (different branches)",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Heathrow Terminal 4",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Heathrow Terminal  5",
+    "gate_to_platform": [
+      {
+        "line": "Heathrow Express",
+        "minutes": 7
+      },
+      {
+        "line": "Piccadilly line",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Heathrow Express",
+        "to_line": "Piccadilly line",
+        "minutes": 5
+      },
+      {
+        "from_line": "Heathrow Express",
+        "to_line": "Piccadilly line",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Heron Quays",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Interchange with Canary Wharf LU station",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "High Barnet",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Highbury & Islington",
+    "gate_to_platform": [
+      {
+        "line": "First Capital Connect",
+        "minutes": 4
+      },
+      {
+        "line": "London Overground",
+        "minutes": 4
+      },
+      {
+        "line": "Victoria",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "First Capital Connect",
+        "to_line": "London Overground",
+        "minutes": 6
+      },
+      {
+        "from_line": "First Capital Connect",
+        "to_line": "Victoria",
+        "minutes": 4
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Victoria",
+        "minutes": 6
+      },
+      {
+        "route": "London Overground (different branches)",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Highgate",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "High Street Kensington",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 4
+      },
+      {
+        "route": "District (different branches)",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Hillingdon",
+    "gate_to_platform": [
+      {
+        "line": "Metropolitan",
+        "minutes": 2
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Metropolitan and Piccadilly line",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Metropolitan and Piccadilly line",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Holborn",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 4
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 6
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "Piccadilly",
+        "minutes": 6
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Piccadilly",
+        "minutes": 6
+      }
+    ]
+  },
+  {
+    "station": "Holland Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Holloway Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Homerton",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Honor Oak Park",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Hornchurch",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hounslow Central",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hounslow East",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hounslow West",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hoxton",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Hyde Park Corner",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Ickenham",
+    "gate_to_platform": [
+      {
+        "line": "Metropolitan",
+        "minutes": 2
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Metropolitan and Piccadilly line",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Metropolitan and Piccadilly line",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Imperial Wharf",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 2
+      },
+      {
+        "line": "Southern",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 5
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Kennington",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between different branches",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Kensal Green",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Bakerloo line and London Overground services",
+        "minutes": 5
+      },
+      {
+        "route": "Connections between Bakerloo line and London Overground services",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Kensal Rise",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Kensington Olympia",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 1
+      },
+      {
+        "line": "London Overground and National Rail",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "District",
+        "to_line": "London Overground and National Rail",
+        "minutes": 3
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "National Rail",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Kentish Town",
+    "gate_to_platform": [
+      {
+        "line": "First Capital Connect",
+        "minutes": 3
+      },
+      {
+        "line": "Northern",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "First Capital Connect",
+        "to_line": "Northern",
+        "minutes": 6
+      },
+      {
+        "from_line": "First Capital Connect",
+        "to_line": "Northern",
+        "minutes": 6
+      }
+    ]
+  },
+  {
+    "station": "Kentish Town West",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Kenton",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Bakerloo line and London Overground services",
+        "minutes": 5
+      },
+      {
+        "route": "Connections between Bakerloo line and London Overground services",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Kew Gardens",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 3
+      },
+      {
+        "line": "London Overground",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between District line and London Overground services",
+        "minutes": 5
+      },
+      {
+        "route": "Connections between District line and London Overground services",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Kilburn",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Kilburn High Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Kilburn Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Kingsbury",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Kings Cross St.Pancras",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 2
+      },
+      {
+        "line": "Metropolitan",
+        "minutes": 2
+      },
+      {
+        "line": "Northern",
+        "minutes": 5.5
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 3
+      },
+      {
+        "line": "Victoria",
+        "minutes": 3
+      },
+      {
+        "line": "National Rail (concourse)",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Circle",
+        "to_line": "Hammersmith & City",
+        "minutes": 2
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Metropolitan",
+        "minutes": 2
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Northern",
+        "minutes": 7.5
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Piccadilly",
+        "minutes": 5
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Victoria",
+        "minutes": 5
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "National Rail",
+        "minutes": 12
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Metropolitan",
+        "minutes": 2
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Northern",
+        "minutes": 7.5
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Piccadilly",
+        "minutes": 5
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Victoria",
+        "minutes": 5
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "National Rail",
+        "minutes": 12
+      },
+      {
+        "from_line": "Metropolitan",
+        "to_line": "Northern",
+        "minutes": 7.5
+      },
+      {
+        "from_line": "Metropolitan",
+        "to_line": "Piccadilly",
+        "minutes": 5
+      },
+      {
+        "from_line": "Metropolitan",
+        "to_line": "Victoria",
+        "minutes": 5
+      },
+      {
+        "from_line": "Metropolitan",
+        "to_line": "National Rail",
+        "minutes": 12
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "Piccadilly",
+        "minutes": 2.5
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "Victoria",
+        "minutes": 4.5
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "National Rail",
+        "minutes": 9.5
+      },
+      {
+        "from_line": "Piccadilly",
+        "to_line": "Victoria",
+        "minutes": 2
+      },
+      {
+        "from_line": "Piccadilly",
+        "to_line": "National Rail",
+        "minutes": 10
+      },
+      {
+        "from_line": "Victoria",
+        "to_line": "National Rail",
+        "minutes": 12
+      }
+    ]
+  },
+  {
+    "station": "King George V",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Knightsbridge",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Ladbroke Grove",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and Hammersmith & City",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Circle and Hammersmith & City",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Lambeth North",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Lancaster Gate",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Langdon Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Latimer Road",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and Hammersmith & City",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Circle and Hammersmith & City",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Leicester Square",
+    "gate_to_platform": [
+      {
+        "line": "Northern",
+        "minutes": 3
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Northern",
+        "to_line": "Piccadilly",
+        "minutes": 4
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "Piccadilly",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Lewisham",
+    "gate_to_platform": [
+      {
+        "line": "DLR",
+        "minutes": 3
+      },
+      {
+        "line": "Southeastern",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "DLR",
+        "to_line": "Southeastern",
+        "minutes": 7
+      },
+      {
+        "from_line": "DLR",
+        "to_line": "Southeastern",
+        "minutes": 7
+      }
+    ]
+  },
+  {
+    "station": "Leyton",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Leyton Midland Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Leytonstone",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between different branches",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Leytonstone High Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Limehouse",
+    "gate_to_platform": [
+      {
+        "line": "C2C",
+        "minutes": 3
+      },
+      {
+        "line": "DLR",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "C2C",
+        "to_line": "DLR",
+        "minutes": 5
+      },
+      {
+        "from_line": "C2C",
+        "to_line": "DLR",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Liverpool Street",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 2
+      },
+      {
+        "line": "Circle",
+        "minutes": 4
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 4
+      },
+      {
+        "line": "Metropolitan",
+        "minutes": 4
+      },
+      {
+        "line": "National Rail (concourse)",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "Circle",
+        "minutes": 6
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Hammersmith & City",
+        "minutes": 6
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Metropolitan",
+        "minutes": 6
+      },
+      {
+        "from_line": "Central",
+        "to_line": "National Rail",
+        "minutes": 6
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Hammersmith & City",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Metropolitan",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "National Rail",
+        "minutes": 8
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Metropolitan",
+        "minutes": 4
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "National Rail",
+        "minutes": 8
+      },
+      {
+        "from_line": "Metropolitan",
+        "to_line": "National Rail",
+        "minutes": 8
+      }
+    ]
+  },
+  {
+    "station": "London Bridge",
+    "gate_to_platform": [
+      {
+        "line": "Jubilee",
+        "minutes": 3
+      },
+      {
+        "line": "Northern",
+        "minutes": 7
+      },
+      {
+        "line": "National Rail",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Jubilee",
+        "to_line": "Northern",
+        "minutes": 6
+      },
+      {
+        "from_line": "Jubilee",
+        "to_line": "National Rail",
+        "minutes": 7
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "National Rail",
+        "minutes": 10
+      }
+    ]
+  },
+  {
+    "station": "London City Airport",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Loughton",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Maida Vale",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Manor House",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Mansion House",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Marble Arch",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Marylebone",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 4
+      },
+      {
+        "line": "Chiltern Railways",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Chiltern Railways",
+        "minutes": 9
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Chiltern Railways",
+        "minutes": 9
+      }
+    ]
+  },
+  {
+    "station": "Mile End",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1.5
+      },
+      {
+        "line": null,
+        "minutes": 1.5
+      },
+      {
+        "line": null,
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "District",
+        "minutes": 3
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Hammersmith & City",
+        "minutes": 3
+      },
+      {
+        "from_line": "District",
+        "to_line": "Hammersmith & City",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Mill Hill East",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Monument, includes interchange values with Bank",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "Circle",
+        "minutes": 7
+      },
+      {
+        "from_line": "Central",
+        "to_line": "District",
+        "minutes": 7
+      },
+      {
+        "from_line": "Central",
+        "to_line": "DLR",
+        "minutes": 3
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Northern",
+        "minutes": 4
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Waterloo & City",
+        "minutes": 4.5
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "DLR",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Northern",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Waterloo & City",
+        "minutes": 10
+      },
+      {
+        "from_line": "District",
+        "to_line": "DLR",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "Northern",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "Waterloo & City",
+        "minutes": 10
+      },
+      {
+        "from_line": "DLR",
+        "to_line": "Northern",
+        "minutes": 3
+      },
+      {
+        "from_line": "DLR",
+        "to_line": "Waterloo & City",
+        "minutes": 6
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "Waterloo & City",
+        "minutes": 7
+      }
+    ]
+  },
+  {
+    "station": "Moorgate (including First Capital Connect)",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 4
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 4
+      },
+      {
+        "line": "Metropolitan",
+        "minutes": 4
+      },
+      {
+        "line": "Northern",
+        "minutes": 5
+      },
+      {
+        "line": "First Capital Connect",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Circle",
+        "to_line": "Hammersmith & City",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Metropolitan",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Northern",
+        "minutes": 7
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "First Capital Connect",
+        "minutes": 6
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Metropolitan",
+        "minutes": 4
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Northern",
+        "minutes": 7
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "First Capital Connect",
+        "minutes": 6
+      },
+      {
+        "from_line": "Metropolitan",
+        "to_line": "Northern",
+        "minutes": 7
+      },
+      {
+        "from_line": "Metropolitan",
+        "to_line": "First Capital Connect",
+        "minutes": 6
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "First Capital Connect",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Moor Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between different branches",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Morden",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Mornington Crescent",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Mudchute",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Neasden",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Newbury Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "New Cross",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 3
+      },
+      {
+        "line": "Southeastern",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "London Overground",
+        "to_line": "Southeastern",
+        "minutes": 4
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Southeastern",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "New Cross Gate",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 3
+      },
+      {
+        "line": "Southern",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 4
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "North Acton",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "North Ealing",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Northfields",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "North Greenwich",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "North Harrow",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Northolt",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "North Wembley",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Bakerloo line and London Overground services",
+        "minutes": 5
+      },
+      {
+        "route": "Connections between Bakerloo line and London Overground services",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Northwick Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Northwood",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Northwood Hills",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Norwood Junction",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 2
+      },
+      {
+        "line": "Southern",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 2
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Notting Hill Gate",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 6
+      },
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "Circle",
+        "minutes": 4
+      },
+      {
+        "from_line": "Central",
+        "to_line": "District",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Oakwood",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Old Street",
+    "gate_to_platform": [
+      {
+        "line": "First Capital Connect",
+        "minutes": 3
+      },
+      {
+        "line": "Northern",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "First Capital Connect",
+        "to_line": "Northern",
+        "minutes": 3
+      },
+      {
+        "from_line": "First Capital Connect",
+        "to_line": "Northern",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Osterley",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Oval",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Oxford Circus",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 4
+      },
+      {
+        "line": "Central",
+        "minutes": 4
+      },
+      {
+        "line": "Victoria",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Central",
+        "minutes": 4
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Victoria",
+        "minutes": 4
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Victoria",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Paddington",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 5
+      },
+      {
+        "line": "Circle, District line platform",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Hammersmith & City platform",
+        "minutes": 5
+      },
+      {
+        "line": "National Rail",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Circle",
+        "minutes": 7
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "District",
+        "minutes": 7
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Hammersmith & City",
+        "minutes": 15
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "National Rail",
+        "minutes": 8
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Hammersmith & City",
+        "minutes": 13
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "National Rail",
+        "minutes": 6
+      },
+      {
+        "from_line": "District",
+        "to_line": "Hammersmith & City",
+        "minutes": 13
+      },
+      {
+        "from_line": "District",
+        "to_line": "National Rail",
+        "minutes": 6
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "National Rail",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Park Royal",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Parsons Green",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Penge West",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 2
+      },
+      {
+        "line": "Southern",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Perivale",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Piccadilly Circus",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 5
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Piccadilly",
+        "minutes": 3
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Piccadilly",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Pimlico",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Pinner",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Plaistow",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between District and Hammersmith & City",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Pontoon Dock",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Poplar",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between different DLR branches",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Preston Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Prince Regent",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Pudding Mill Lane",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Putney Bridge",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Queensbury",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Queens Park",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground",
+        "minutes": 2.5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "London Overground",
+        "minutes": 4.5
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "London Overground",
+        "minutes": 4.5
+      }
+    ]
+  },
+  {
+    "station": "Queensway",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 5
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Ravenscourt Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Rayners Lane",
+    "gate_to_platform": [
+      {
+        "line": "Metropolitan",
+        "minutes": 2
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Metropolitan",
+        "to_line": "Piccadilly",
+        "minutes": 4
+      },
+      {
+        "from_line": "Metropolitan",
+        "to_line": "Piccadilly",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Redbridge",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Regents Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Richmond",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground",
+        "minutes": 2
+      },
+      {
+        "line": "South West Trains",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "District",
+        "to_line": "London Overground",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "South West Trains",
+        "minutes": 4
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "South West Trains",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Rickmansworth",
+    "gate_to_platform": [
+      {
+        "line": "Chiltern Railways",
+        "minutes": 3
+      },
+      {
+        "line": "Metropolitan",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Chiltern Railways",
+        "to_line": "Metropolitan",
+        "minutes": 3
+      },
+      {
+        "from_line": "Chiltern Railways",
+        "to_line": "Metropolitan",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Roding Valley",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Rotherhithe",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Royal Albert",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Royal Oak",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and Hammersmith & City line",
+        "minutes": 2
+      },
+      {
+        "route": "Connections between Circle and Hammersmith & City line",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Royal Victoria",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Ruislip",
+    "gate_to_platform": [
+      {
+        "line": "Metropolitan",
+        "minutes": 3
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Metropolitan and Piccadilly line",
+        "minutes": 3
+      },
+      {
+        "route": "Connections between Metropolitan and Piccadilly line",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Ruislip Gardens",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Ruislip Manor",
+    "gate_to_platform": [
+      {
+        "line": "Metropolitan",
+        "minutes": 2
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Metropolitan and Piccadilly line",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Metropolitan and Piccadilly line",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Russell Square",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 6
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "St.James\u2019s Park",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and District lines",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Circle and District lines",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "St John\u2019s Wood",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "St.Pauls",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Seven Sisters",
+    "gate_to_platform": [
+      {
+        "line": "National Express East Anglia",
+        "minutes": 10
+      },
+      {
+        "line": "Victoria",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "National Express East Anglia",
+        "to_line": "Victoria",
+        "minutes": 7
+      },
+      {
+        "from_line": "National Express East Anglia",
+        "to_line": "Victoria",
+        "minutes": 7
+      }
+    ]
+  },
+  {
+    "station": "Shadwell",
+    "gate_to_platform": [
+      {
+        "line": "DLR",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "DLR",
+        "to_line": "London Overground",
+        "minutes": 5
+      },
+      {
+        "from_line": "DLR",
+        "to_line": "London Overground",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Shepherds Bush",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 3
+      },
+      {
+        "line": "London Overground",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "London Overground",
+        "minutes": 8
+      },
+      {
+        "from_line": "Central",
+        "to_line": "London Overground",
+        "minutes": 8
+      }
+    ]
+  },
+  {
+    "station": "Shepherds Bush Market",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and Hammersmith & City lines",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Circle and Hammersmith & City lines",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Shoreditch High Street",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Sloane Square",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and District lines",
+        "minutes": 5
+      },
+      {
+        "route": "Connections between Circle and District lines",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Snaresbrook",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "South Acton",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "South Ealing",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Southfields",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Southgate",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "South Hampstead",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "South Harrow",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "South Kensington",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 2
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Piccadilly",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "Piccadilly",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "South Kenton",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 1
+      },
+      {
+        "line": "London Overground",
+        "minutes": 1
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "London Overground",
+        "minutes": 2
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "London Overground",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "South Quay",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "South Ruislip",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 2
+      },
+      {
+        "line": "Chiltern Railways",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "Chiltern Railways",
+        "minutes": 5
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Chiltern Railways",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "South Tottenham",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Southwark",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 5
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "South Wimbledon",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "South Woodford",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Stamford Brook",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Stanmore",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Star Lane",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Stepney Green",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between District and Hammersmith & City line",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between District and Hammersmith & City line",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Stockwell",
+    "gate_to_platform": [
+      {
+        "line": "Northern",
+        "minutes": 3.5
+      },
+      {
+        "line": "Victoria",
+        "minutes": 3.5
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Northern Line and Victoria line trains",
+        "minutes": 3
+      },
+      {
+        "route": "Connections between Northern Line and Victoria line trains",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Stonebridge Park",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 3
+      },
+      {
+        "line": "London Overground",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Bakerloo and London Overground",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Bakerloo and London Overground",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Stratford",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 2
+      },
+      {
+        "line": "DLR Stratford Int",
+        "minutes": 3
+      },
+      {
+        "line": "DLR Canary Wharf",
+        "minutes": 2.5
+      },
+      {
+        "line": "London Overground",
+        "minutes": 4
+      },
+      {
+        "line": "National Express East Anglia",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "DLR Stratford Int",
+        "minutes": 4
+      },
+      {
+        "from_line": "Central",
+        "to_line": "DLR Canary Wharf",
+        "minutes": 3
+      },
+      {
+        "from_line": "Central",
+        "to_line": "London Overground",
+        "minutes": 5
+      },
+      {
+        "from_line": "Central",
+        "to_line": "National Express East Anglia",
+        "minutes": 5
+      },
+      {
+        "from_line": "DLR Stratford Int",
+        "to_line": "DLR Canary Wharf",
+        "minutes": 4.5
+      },
+      {
+        "from_line": "DLR Stratford Int",
+        "to_line": "London Overground",
+        "minutes": 6
+      },
+      {
+        "from_line": "DLR Stratford Int",
+        "to_line": "National Express East Anglia",
+        "minutes": 6
+      },
+      {
+        "from_line": "DLR Canary Wharf",
+        "to_line": "London Overground",
+        "minutes": 6
+      },
+      {
+        "from_line": "DLR Canary Wharf",
+        "to_line": "National Express East Anglia",
+        "minutes": 6
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "National Express East Anglia",
+        "minutes": 7
+      }
+    ]
+  },
+  {
+    "station": "Stratford International",
+    "gate_to_platform": [
+      {
+        "line": "DLR",
+        "minutes": 3
+      },
+      {
+        "line": "Southeastern",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "DLR",
+        "to_line": "Southeastern",
+        "minutes": 6
+      },
+      {
+        "from_line": "DLR",
+        "to_line": "Southeastern",
+        "minutes": 6
+      }
+    ]
+  },
+  {
+    "station": "Sudbury Hill",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Sudbury Town",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Surrey Quays",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Swiss Cottage",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Sydenham",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 2
+      },
+      {
+        "line": "Southern",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between London Overground and Southern",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Temple",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and District",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Circle and District",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Theydon Bois",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Tooting Bec",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Tooting Broadway",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Tottenham Court Road",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 4
+      },
+      {
+        "line": "Northern",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "Northern",
+        "minutes": 4
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Northern",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Tottenham Hale",
+    "gate_to_platform": [
+      {
+        "line": "National Express East Anglia",
+        "minutes": 3
+      },
+      {
+        "line": "Victoria",
+        "minutes": 5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "National Express East Anglia",
+        "to_line": "Victoria",
+        "minutes": 5
+      },
+      {
+        "from_line": "National Express East Anglia",
+        "to_line": "Victoria",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Totteridge & Whetstone",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Tower Gateway",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Tower Hill",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 1
+      },
+      {
+        "line": "District",
+        "minutes": 1
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and District, and with terminating District",
+        "minutes": 2
+      },
+      {
+        "route": "Connections between Circle and District, and with terminating District",
+        "minutes": 2
+      }
+    ]
+  },
+  {
+    "station": "Tufnell Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Turnham Green",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "District (between branches)",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "Piccadilly",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Turnpike Lane",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Upminster",
+    "gate_to_platform": [
+      {
+        "line": "C2C",
+        "minutes": 2.5
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "National Express East Anglia",
+        "minutes": 2.5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "C2C",
+        "to_line": "District",
+        "minutes": 4.5
+      },
+      {
+        "from_line": "C2C",
+        "to_line": "National Express East Anglia",
+        "minutes": 5
+      },
+      {
+        "from_line": "District",
+        "to_line": "National Express East Anglia",
+        "minutes": 4.5
+      }
+    ]
+  },
+  {
+    "station": "Upminster Bridge",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Upney",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Upper Holloway",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Upton Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "District",
+        "to_line": "Hammersmith & City",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Uxbridge",
+    "gate_to_platform": [
+      {
+        "line": "Metropolitan",
+        "minutes": 1
+      },
+      {
+        "line": "Piccadilly",
+        "minutes": 1
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Metropolitan",
+        "to_line": "Piccadilly",
+        "minutes": 1
+      },
+      {
+        "from_line": "Metropolitan",
+        "to_line": "Piccadilly",
+        "minutes": 1
+      }
+    ]
+  },
+  {
+    "station": "Vauxhall",
+    "gate_to_platform": [
+      {
+        "note": "South West Trains"
+      },
+      {
+        "line": "Victoria",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "South West Trains",
+        "to_line": "Victoria",
+        "minutes": 9
+      },
+      {
+        "from_line": "South West Trains",
+        "to_line": "Victoria",
+        "minutes": 9
+      }
+    ]
+  },
+  {
+    "station": "Victoria",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 3
+      },
+      {
+        "line": "District",
+        "minutes": 3
+      },
+      {
+        "note": "Southern (inc Gatwick Express)"
+      },
+      {
+        "note": "Southeastern"
+      },
+      {
+        "line": "Victoria",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 2
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Southern",
+        "minutes": 10
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Southeastern",
+        "minutes": 10
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Victoria",
+        "minutes": 4
+      },
+      {
+        "from_line": "District",
+        "to_line": "Southern",
+        "minutes": 10
+      },
+      {
+        "from_line": "District",
+        "to_line": "Southeastern",
+        "minutes": 10
+      },
+      {
+        "from_line": "District",
+        "to_line": "Victoria",
+        "minutes": 4
+      },
+      {
+        "from_line": "Southern",
+        "to_line": "Southeastern",
+        "minutes": 10
+      },
+      {
+        "from_line": "Southern",
+        "to_line": "Victoria",
+        "minutes": 10
+      },
+      {
+        "from_line": "Southeastern",
+        "to_line": "Victoria",
+        "minutes": 10
+      }
+    ]
+  },
+  {
+    "station": "Walthamstow Central",
+    "gate_to_platform": [
+      {
+        "line": "National Express East Anglia",
+        "minutes": 3
+      },
+      {
+        "line": "Victoria",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "National Express East Anglia",
+        "to_line": "Victoria",
+        "minutes": 4
+      },
+      {
+        "from_line": "National Express East Anglia",
+        "to_line": "Victoria",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Walthamstow Queens Road",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Wanstead",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Wanstead Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Wapping",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Warren Street",
+    "gate_to_platform": [
+      {
+        "line": "Northern",
+        "minutes": 6
+      },
+      {
+        "line": "Victoria",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Northern",
+        "to_line": "Victoria",
+        "minutes": 6
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "Victoria",
+        "minutes": 6
+      }
+    ]
+  },
+  {
+    "station": "Warwick Avenue",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Waterloo",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 6
+      },
+      {
+        "line": "Jubilee",
+        "minutes": 6
+      },
+      {
+        "line": "Northern",
+        "minutes": 6
+      },
+      {
+        "line": "South West Trains",
+        "minutes": 6
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Jubilee",
+        "minutes": 6
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Northern",
+        "minutes": 4
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "South West Trains",
+        "minutes": 10
+      },
+      {
+        "from_line": "Jubilee",
+        "to_line": "Northern",
+        "minutes": 6
+      },
+      {
+        "from_line": "Jubilee",
+        "to_line": "South West Trains",
+        "minutes": 11
+      },
+      {
+        "from_line": "Northern",
+        "to_line": "South West Trains",
+        "minutes": 10
+      }
+    ]
+  },
+  {
+    "station": "Watford High Street",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Watford",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Watford Junction",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 4
+      },
+      {
+        "line": "London Midland",
+        "minutes": 4
+      },
+      {
+        "line": "Southern",
+        "minutes": 4
+      },
+      {
+        "line": "Virgin Trains",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "London Overground",
+        "to_line": "London Midland",
+        "minutes": 5
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 5
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Virgin Trains",
+        "minutes": 5
+      },
+      {
+        "from_line": "London Midland",
+        "to_line": "Southern",
+        "minutes": 5
+      },
+      {
+        "from_line": "London Midland",
+        "to_line": "Virgin Trains",
+        "minutes": 5
+      },
+      {
+        "from_line": "Southern",
+        "to_line": "Virgin Trains",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Wembley Central",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 2.5
+      },
+      {
+        "line": "London Overground",
+        "minutes": 2.5
+      },
+      {
+        "line": "Southern",
+        "minutes": 2.5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "London Overground",
+        "minutes": 5
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "Southern",
+        "minutes": 5
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Wembley Park",
+    "gate_to_platform": [
+      {
+        "line": "Jubilee",
+        "minutes": 2
+      },
+      {
+        "line": "Metropolitan",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Jubilee",
+        "to_line": "Metropolitan",
+        "minutes": 4
+      },
+      {
+        "from_line": "Jubilee",
+        "to_line": "Metropolitan",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "West Acton",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Westbourne Park",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between Circle and Hammersmith & City lines",
+        "minutes": 4
+      },
+      {
+        "route": "Connections between Circle and Hammersmith & City lines",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "West Brompton",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground",
+        "minutes": 3
+      },
+      {
+        "line": "Southern",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "District",
+        "to_line": "London Overground",
+        "minutes": 5
+      },
+      {
+        "from_line": "District",
+        "to_line": "Southern",
+        "minutes": 5
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "West Croydon",
+    "gate_to_platform": [
+      {
+        "line": "London Overground",
+        "minutes": 2
+      },
+      {
+        "line": "Southern",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 4
+      },
+      {
+        "from_line": "London Overground",
+        "to_line": "Southern",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "Westferry",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Interchange between different DLR branches",
+        "minutes": 4
+      }
+    ]
+  },
+  {
+    "station": "West Finchley",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "West Ham",
+    "gate_to_platform": [
+      {
+        "line": "C2C",
+        "minutes": 2.5
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "DLR",
+        "minutes": 3
+      },
+      {
+        "line": "Hammersmith & City",
+        "minutes": 2
+      },
+      {
+        "line": "Jubilee",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "C2C",
+        "to_line": "District",
+        "minutes": 4.5
+      },
+      {
+        "from_line": "C2C",
+        "to_line": "DLR",
+        "minutes": 5.5
+      },
+      {
+        "from_line": "C2C",
+        "to_line": "Hammersmith & City",
+        "minutes": 4.5
+      },
+      {
+        "from_line": "C2C",
+        "to_line": "Jubilee",
+        "minutes": 5.5
+      },
+      {
+        "from_line": "District",
+        "to_line": "DLR",
+        "minutes": 5
+      },
+      {
+        "from_line": "District",
+        "to_line": "Hammersmith & City",
+        "minutes": 5
+      },
+      {
+        "from_line": "District",
+        "to_line": "Jubilee",
+        "minutes": 5
+      },
+      {
+        "from_line": "DLR",
+        "to_line": "Hammersmith & City",
+        "minutes": 5
+      },
+      {
+        "from_line": "DLR",
+        "to_line": "Jubilee",
+        "minutes": 3
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "Jubilee",
+        "minutes": null,
+        "note": "no time specified in source"
+      }
+    ]
+  },
+  {
+    "station": "West Hampstead",
+    "gate_to_platform": [
+      {
+        "line": "Jubilee",
+        "minutes": 1
+      },
+      {
+        "line": "London Overground",
+        "minutes": 1.5
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Jubilee",
+        "to_line": "London Overground",
+        "minutes": 3.5
+      },
+      {
+        "from_line": "Jubilee",
+        "to_line": "London Overground",
+        "minutes": 3.5
+      }
+    ]
+  },
+  {
+    "station": "West Harrow",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "West India Quay",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "note": "Interchange between different DLR branches"
+      }
+    ]
+  },
+  {
+    "station": "West Kensington",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Westminster",
+    "gate_to_platform": [
+      {
+        "line": "Circle",
+        "minutes": 2
+      },
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "Jubilee",
+        "minutes": 6
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Circle",
+        "to_line": "District",
+        "minutes": 4
+      },
+      {
+        "from_line": "Circle",
+        "to_line": "Jubilee",
+        "minutes": 6
+      },
+      {
+        "from_line": "District",
+        "to_line": "Jubilee",
+        "minutes": 6
+      }
+    ]
+  },
+  {
+    "station": "West Ruislip",
+    "gate_to_platform": [
+      {
+        "line": "Central",
+        "minutes": 2
+      },
+      {
+        "line": "Chiltern Railways",
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Central",
+        "to_line": "Chiltern Railways",
+        "minutes": 5
+      },
+      {
+        "from_line": "Central",
+        "to_line": "Chiltern Railways",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "West Silvertown",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 1
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Whitechapel",
+    "gate_to_platform": [
+      {
+        "line": "Hammersmith & City",
+        "minutes": 3
+      },
+      {
+        "line": "District",
+        "minutes": 3
+      },
+      {
+        "line": "London Overground",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "District",
+        "minutes": 2
+      },
+      {
+        "from_line": "Hammersmith & City",
+        "to_line": "London Overground",
+        "minutes": 5
+      },
+      {
+        "from_line": "District",
+        "to_line": "London Overground",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "White City",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Willesden Green",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Willesden Junction",
+    "gate_to_platform": [
+      {
+        "line": "Bakerloo",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground (Watford)",
+        "minutes": 2
+      },
+      {
+        "line": "London Overground (North/West London Lines)",
+        "minutes": 6
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "Bakerloo",
+        "to_line": "London Overground (Watford)",
+        "minutes": 4
+      },
+      {
+        "from_line": "Bakerloo",
+        "to_line": "London Overground (North/West London Lines)",
+        "minutes": 5
+      },
+      {
+        "from_line": "London Overground (Watford)",
+        "to_line": "London Overground (North/West London Lines)",
+        "minutes": 5
+      },
+      {
+        "route": "London Overground (between North and West London Lines)",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Wimbledon",
+    "gate_to_platform": [
+      {
+        "line": "District",
+        "minutes": 2
+      },
+      {
+        "line": "South West Trains",
+        "minutes": 3
+      },
+      {
+        "line": "Tramlink",
+        "minutes": 2
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "District",
+        "to_line": "South West Trains",
+        "minutes": 5
+      },
+      {
+        "from_line": "District",
+        "to_line": "Tramlink",
+        "minutes": 4
+      },
+      {
+        "from_line": "South West Trains",
+        "to_line": "Tramlink",
+        "minutes": 5
+      }
+    ]
+  },
+  {
+    "station": "Wimbledon Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Woodford",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": [
+      {
+        "route": "Connections between different branches",
+        "minutes": 3
+      }
+    ]
+  },
+  {
+    "station": "Woodgrange Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 4
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Wood Green",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Wood Lane",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 2
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Woodside Park",
+    "gate_to_platform": [
+      {
+        "line": null,
+        "minutes": 3
+      }
+    ],
+    "interchanges": []
+  },
+  {
+    "station": "Woolwich Arsenal",
+    "gate_to_platform": [
+      {
+        "line": "DLR",
+        "minutes": 4
+      },
+      {
+        "line": "Southeastern",
+        "minutes": 4
+      }
+    ],
+    "interchanges": [
+      {
+        "from_line": "DLR",
+        "to_line": "Southeastern",
+        "minutes": 4
+      }
+    ]
+  }
+]

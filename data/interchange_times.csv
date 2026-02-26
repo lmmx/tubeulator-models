@@ -1,0 +1,964 @@
+station,type,from_line,to_line,minutes,raw
+Abbey Road,gate_to_platform,,,,1 minute
+Acton Central,gate_to_platform,,,,2 minutes
+Acton Town,gate_to_platform,,,,1 minute
+Acton Town,interchange,District <> Piccadilly line,,2,
+Aldgate,gate_to_platform,,,,2 minutes
+Aldgate,interchange,Connections between Circle and Metropolitan line trains,,4,
+Aldgate East,gate_to_platform,,,,1 minute
+Aldgate East,interchange,Connections between District and Hammersmith & City line trains,,2,
+All Saints,gate_to_platform,,,,1 minute
+Alperton,gate_to_platform,,,,1 minute
+Amersham,gate_to_platform,,,,2 minutes
+Amersham,interchange,Connections between Metropolitan and Chiltern Railways,,3,
+Anerley,gate_to_platform,London Overground,,3,
+Anerley,gate_to_platform,Southern,,3,
+Anerley,interchange,Connections between London Overground and Southern,,4,
+Anerley,interchange,Connections between London Overground and Southern,,4,
+Angel,gate_to_platform,,,,2 minutes
+Archway,gate_to_platform,,,,2 minutes
+Arnos Grove,gate_to_platform,,,,2 minutes
+Arsenal,gate_to_platform,,,,3 minutes
+Baker Street,gate_to_platform,Bakerloo,,7,
+Baker Street,gate_to_platform,Jubilee,,7,
+Baker Street,gate_to_platform,Circle,,4,
+Baker Street,gate_to_platform,Hammersmith & City,,4,
+Baker Street,gate_to_platform,Metropolitan,,4,
+Baker Street,interchange,Bakerloo,Circle,8,
+Baker Street,interchange,Bakerloo,Hammersmith & City,8,
+Baker Street,interchange,Bakerloo,Jubilee,2,
+Baker Street,interchange,Bakerloo,Metropolitan,3,
+Baker Street,interchange,Circle,Hammersmith & City,2,
+Baker Street,interchange,Circle,Jubilee,8,
+Baker Street,interchange,Circle,Metropolitan,8,
+Baker Street,interchange,Hammersmith & City,Jubilee,8,
+Baker Street,interchange,Hammersmith & City,Metropolitan,5,
+Baker Street,interchange,Jubilee,Metropolitan,3,
+Balham,gate_to_platform,Northern,,2,
+Balham,gate_to_platform,Southern,,2,
+Balham,interchange,Northern,National Rail,8,
+Balham,interchange,Northern,National Rail,8,
+"Bank, including Monument interchange values",gate_to_platform,Central,,35,
+"Bank, including Monument interchange values",gate_to_platform,DLR,,45,
+"Bank, including Monument interchange values",gate_to_platform,Northern,,55,
+"Bank, including Monument interchange values",gate_to_platform,Waterloo & City,,3,
+"Bank, including Monument interchange values",interchange,Central,Circle,7,
+"Bank, including Monument interchange values",interchange,Central,District,7,
+"Bank, including Monument interchange values",interchange,Central,DLR,3,
+"Bank, including Monument interchange values",interchange,Central,Northern,4,
+"Bank, including Monument interchange values",interchange,Central,Waterloo & City,45,
+"Bank, including Monument interchange values",interchange,Circle,DLR,4,
+"Bank, including Monument interchange values",interchange,Circle,Northern,4,
+"Bank, including Monument interchange values",interchange,Circle,Waterloo & City,10,
+"Bank, including Monument interchange values",interchange,District,DLR,4,
+"Bank, including Monument interchange values",interchange,District,Northern,4,
+"Bank, including Monument interchange values",interchange,District,Waterloo & City,10,
+"Bank, including Monument interchange values",interchange,DLR,Northern,3,
+"Bank, including Monument interchange values",interchange,DLR,Waterloo & City,6,
+"Bank, including Monument interchange values",interchange,Northern,Waterloo & City,7,
+Barbican,gate_to_platform,,,,1 minute
+Barbican,gate_to_platform,,,,1 minute
+Barbican,gate_to_platform,,,,1 minute
+Barbican,interchange,Circle,Hammersmith & City,2,
+Barbican,interchange,Circle,Metropolitan,2,
+Barbican,interchange,Hammersmith & City,Metropolitan,2,
+Barking,gate_to_platform,District,,2,
+Barking,gate_to_platform,Hammersmith & City,,2,
+Barking,gate_to_platform,National Rail (c2c),,2,
+Barking,gate_to_platform,London Overground,,2,
+Barking,interchange,District,c2c,4,
+Barking,interchange,District,Hammersmith & City,4,
+Barking,interchange,District,London Overground,4,
+Barking,interchange,C2C,Hammersmith & City,4,
+Barking,interchange,C2C,London Overground,4,
+Barking,interchange,London Overground,Hammersmith & City,4,
+Barkingside,gate_to_platform,,,,2 minutes
+Barons Court,gate_to_platform,,,,2 minutes
+Barons Court,interchange,Connections between District and Piccadilly line trains,,4,
+Bayswater,gate_to_platform,,,,2 minutes
+Bayswater,interchange,Connections between Circle and District line trains,,4,
+Beckton,gate_to_platform,,,,2 minutes
+Beckton Park,gate_to_platform,,,,2 minutes
+Becontree,gate_to_platform,,,,2 minutes
+Belsize Park,gate_to_platform,,,,5 minutes
+Bermondsey,gate_to_platform,,,,3 minutes
+"Bethnal Green, London Underground",gate_to_platform,,,,2 minutes
+Blackfriars,gate_to_platform,,,,Underground station closed – to be reassessed on reopening
+Blackhorse Road,gate_to_platform,London Overground,,3,
+Blackhorse Road,gate_to_platform,Victoria,,3,
+Blackhorse Road,interchange,London Overground,Victoria,6,
+Blackhorse Road,interchange,London Overground,Victoria,6,
+Blackwall,gate_to_platform,,,,2 minutes
+Bond Street,gate_to_platform,Central,,4,
+Bond Street,gate_to_platform,Jubilee,,4,
+Bond Street,interchange,Central,Jubilee,4,
+Bond Street,interchange,Central,Jubilee,4,
+Borough,gate_to_platform,,,,3 minutes
+Boston Manor,gate_to_platform,,,,1 minute
+Bounds Green,gate_to_platform,,,,2 minutes
+Bow Church,gate_to_platform,,,,2 minutes
+Bow Church,interchange,,,,Step-free access via lift (one on each platform)
+Bow Road,gate_to_platform,,,,1 minute
+Bow Road,interchange,District,Hammersmith & City,2,
+Brent Cross,gate_to_platform,,,,2 minutes
+Brixton London Underground,gate_to_platform,,,,2 minutes
+Brockley,gate_to_platform,London Overground,,2,
+Brockley,gate_to_platform,Southern,,2,
+Brockley,interchange,Connections between London Overground and Southern,,4,
+Brockley,interchange,Connections between London Overground and Southern,,4,
+Bromley-By-Bow,gate_to_platform,,,,2 minutes
+Bromley-By-Bow,interchange,District,Hammersmith & City,4,
+Brondesbury,gate_to_platform,,,,2 minutes
+Brondesbury Park,gate_to_platform,,,,2 minutes
+Buckhurst Hill,gate_to_platform,,,,2 minutes
+Burnt Oak,gate_to_platform,,,,2 minutes
+Bushey,gate_to_platform,London Midland,,2,
+Bushey,gate_to_platform,London Overground,,2,
+Bushey,interchange,London Overground,London Midland,4,
+Bushey,interchange,London Overground,London Midland,4,
+Caledonian Road London Underground,gate_to_platform,,,,4 minutes
+Caledonian Road & Barnsbury,gate_to_platform,,,,2 minutes
+Camden Road,gate_to_platform,,,,3 minutes
+Camden Town,gate_to_platform,,,,4 minutes
+Camden Town,interchange,Interchange between branches,,4,
+Canada Water,gate_to_platform,London Overground,,2,
+Canada Water,gate_to_platform,Jubilee,,4,
+Canada Water,interchange,Jubilee,London Overground,25,
+Canada Water,interchange,Jubilee,London Overground,25,
+Canary Wharf DLR,gate_to_platform,,,,1 minute
+Canary Wharf London Underground,gate_to_platform,,,,1 minute
+Canary Wharf London Underground,interchange,Interchange with Heron Quays DLR,,5,
+Canning Town,gate_to_platform,DLR,,3,
+Canning Town,gate_to_platform,Jubilee line,,2,
+Canning Town,interchange,DLR,Jubilee,4,
+Canning Town,interchange,DLR between branches,,5,
+Cannon Street,gate_to_platform,,,,2 minutes
+Cannon Street,gate_to_platform,,,,2 minutes
+Cannon Street,gate_to_platform,,,,2 minutes
+Cannon Street,interchange,Circle,District,3,
+Cannon Street,interchange,Circle,National Rail,7,
+Cannon Street,interchange,District,National Rail,7,
+Canonbury,gate_to_platform,,,,2 minutes
+Canons Park,gate_to_platform,,,,2 minutes
+Carpenders Park,gate_to_platform,,,,4 minutes
+Chalfont & Latimer,gate_to_platform,Chiltern,,4,
+Chalfont & Latimer,gate_to_platform,Metropolitan,,3,
+Chalfont & Latimer,interchange,Chiltern,Metropolitan,4,
+Chalfont & Latimer,interchange,Chiltern,Metropolitan,4,
+Chalk Farm,gate_to_platform,,,,3 minutes
+Chancery Lane,gate_to_platform,,,,4 minutes
+Charing Cross,gate_to_platform,Bakerloo,,7,
+Charing Cross,gate_to_platform,Northern,,7,
+Charing Cross,gate_to_platform,National Rail,,5,
+Charing Cross,interchange,Bakerloo,Northern,7,
+Charing Cross,interchange,Bakerloo,National Rail,10,
+Charing Cross,interchange,Northern,National Rail,7,
+Chesham,gate_to_platform,,,,2 minutes
+Chigwell,gate_to_platform,,,,2 minutes
+Chiswick Park,gate_to_platform,,,,3 minutes
+Chorleywood,gate_to_platform,Chiltern Railways,,2,
+Chorleywood,gate_to_platform,Metropolitan,,2,
+Chorleywood,interchange,Chiltern Railways,Metropolitan,3,
+Chorleywood,interchange,Chiltern Railways,Metropolitan,3,
+Clapham Common,gate_to_platform,,,,3 minutes
+Clapham Junction,gate_to_platform,London Overground,,6,
+Clapham Junction,gate_to_platform,Southern,,6,
+Clapham Junction,gate_to_platform,South West Trains (Richmond line),,5,
+Clapham Junction,gate_to_platform,South West Trains (Wimbledon line),,5,
+Clapham Junction,interchange,London Overground,Southern,4,
+Clapham Junction,interchange,London Overground,South West Trains (Richmond),5,
+Clapham Junction,interchange,London Overground,South West Trains (Wimbledon),5,
+Clapham Junction,interchange,Southern,South West Trains (Richmond),4,
+Clapham Junction,interchange,Southern,South West Trains (Wimbledon),3,
+Clapham Junction,interchange,South West Trains (Richmond),South West Trains (Wimbledon),5,
+Covent Garden,gate_to_platform,,,,4 minutes
+Crossharbour,gate_to_platform,,,,2 minutes
+Crouch Hill,gate_to_platform,,,,2 minutes
+Croxley,gate_to_platform,,,,2 minutes
+Crystal Palace,gate_to_platform,London Overground,,2,
+Crystal Palace,gate_to_platform,Southern,,2,
+Crystal Palace,interchange,London Overground,Southern,4,
+Crystal Palace,interchange,"Southern, between branches",,4,
+Custom House (for ExCel),gate_to_platform,,,,1.5 minutes
+Cutty Sark,gate_to_platform,,,,2 minutes
+Cyprus,gate_to_platform,,,,2 minutes
+Cyprus,gate_to_platform,,,,2 minutes
+Dagenham East,gate_to_platform,,,,2 minutes
+Dagenham Heathway,gate_to_platform,,,,2 minutes
+Dalston Junction,gate_to_platform,,,,1 minute
+Dalston Kingsland,gate_to_platform,,,,2 minutes
+Debden,gate_to_platform,,,,2 minutes
+Deptford Bridge,gate_to_platform,,,,2 minutes
+Devons Road,gate_to_platform,,,,2 minutes
+Dollis Hill,gate_to_platform,,,,1.5 minutes
+Ealing Broadway,gate_to_platform,Central,,2,
+Ealing Broadway,gate_to_platform,District,,2,
+Ealing Broadway,gate_to_platform,First Great Western,,3,
+Ealing Broadway,gate_to_platform,Heathrow Connect,,3,
+Ealing Broadway,interchange,Central,District,4,
+Ealing Broadway,interchange,Central,First Great Western,5,
+Ealing Broadway,interchange,Central,Heathrow Connect,5,
+Ealing Broadway,interchange,District,First Great Western,5,
+Ealing Broadway,interchange,District,Heathrow Connect,5,
+Ealing Common,gate_to_platform,District,,2,
+Ealing Common,gate_to_platform,Piccadilly,,2,
+Ealing Common,interchange,Connections between District and Piccadilly line,,4,
+Ealing Common,interchange,Connections between District and Piccadilly line,,4,
+Earls Court,gate_to_platform,District,,2,
+Earls Court,gate_to_platform,Piccadilly,,5,
+Earls Court,interchange,Connections between District and Piccadilly line,,32,
+Earls Court,interchange,Connections between District and Piccadilly line,,32,
+East Acton,gate_to_platform,,,,2 minutes
+Eastcote,gate_to_platform,,,,2 minutes
+Eastcote,interchange,Connections between Metropolitan and Piccadilly line,,4,
+East Finchley,gate_to_platform,,,,2 minutes
+East Ham,gate_to_platform,,,,2 minutes
+East Ham,interchange,Connections between District and Hammersmith & City line,,4,
+East India,gate_to_platform,,,,2 minutes
+East Putney,gate_to_platform,,,,2 minutes
+Edgware,gate_to_platform,,,,2 minutes
+Edgware Road Bakerloo,gate_to_platform,,,,4 minutes
+Edgware Road Circle,gate_to_platform,,,,2 minutes
+Edgware Road Circle,interchange,"Connections between District, Hammersmith & City Circle line trains",,4,
+Elephant & Castle London Underground,gate_to_platform,Bakerloo,,5,
+Elephant & Castle London Underground,gate_to_platform,Northern,,7,
+Elephant & Castle London Underground,interchange,Bakerloo,Northern,2,
+Elephant & Castle London Underground,interchange,Bakerloo,Northern,2,
+Elm Park,gate_to_platform,,,,2 minutes
+Elverson Road,gate_to_platform,,,,2 minutes
+Elverson Road,interchange,,,,Step-free level access available
+Embankment,gate_to_platform,Bakerloo,,5,
+Embankment,gate_to_platform,Circle,,2,
+Embankment,gate_to_platform,District,,2,
+Embankment,gate_to_platform,Northern,,5,
+Embankment,interchange,Bakerloo,Circle,5,
+Embankment,interchange,Bakerloo,District,5,
+Embankment,interchange,Bakerloo,Northern,5,
+Embankment,interchange,Circle,District,4,
+Embankment,interchange,Circle,Northern,5,
+Embankment,interchange,District,Northern,5,
+Epping,gate_to_platform,,,,2 minutes
+Euston,gate_to_platform,Northern,,5,
+Euston,gate_to_platform,Victoria,,4,
+Euston,gate_to_platform,London Overground/NR (from concourse),,7,
+Euston,interchange,Northern,Victoria,5,
+Euston,interchange,Northern,London Overground/NR,10,
+Euston,interchange,Victoria,London Overground/NR,9,
+Euston Square,gate_to_platform,,,,2 minutes
+Euston Square,interchange,"Connections between Metropolitan, Hammersmith & City, Circle line trains",,2,
+Fairlop,gate_to_platform,,,,2 minutes
+Farringdon,gate_to_platform,Circle,,2,
+Farringdon,gate_to_platform,Hammersmith & City,,2,
+Farringdon,gate_to_platform,Metropolitan,,2,
+Farringdon,gate_to_platform,First  Capital Connect,,3,
+Farringdon,interchange,"Connections between Metropolitan, Hammersmith & City and Circle line trains",,4,
+Farringdon,interchange,"Connections between Metropolitan, Hammersmith & City and Circle line trains and First Capital Connect",,5,
+Finchley Central,gate_to_platform,,,,1.5 minutes
+Finchley Central,interchange,Connections between High Barnet and trains terminating at Mill Hill East,,3,
+Finchley Road,gate_to_platform,Jubilee,,15,
+Finchley Road,gate_to_platform,Metropolitan,,15,
+Finchley Road,interchange,Connections between Jubilee and Metropolitan line trains,,3,
+Finchley Road,interchange,Connections between Jubilee and Metropolitan line trains,,3,
+Finchley Road & Frognal,gate_to_platform,,,,2 minutes
+Finsbury Park,gate_to_platform,Piccadilly,,2,
+Finsbury Park,gate_to_platform,Victoria,,2,
+Finsbury Park,gate_to_platform,First Capital Connect,,3,
+Finsbury Park,interchange,Connections between Piccadilly and Victoria line trains,,4,
+Finsbury Park,interchange,Connections between Piccadilly and First Capital Connect,,5,
+Finsbury Park,interchange,Connections between Victoria and First Capital Connect,,5,
+Forest Hill,gate_to_platform,London Overground,,4,
+Forest Hill,gate_to_platform,Southern,,4,
+Forest Hill,interchange,Connections between London Overground and Southern,,4,
+Forest Hill,interchange,Connections between London Overground and Southern,,4,
+Fulham Broadway,gate_to_platform,,,,2 minutes
+Gallions Reach,gate_to_platform,,,,2 minutes
+Gants Hill,gate_to_platform,,,,2 minutes
+Gloucester Road,gate_to_platform,,,,Circle – 2 minutes
+Gloucester Road,gate_to_platform,,,,District – 2 minutes
+Gloucester Road,gate_to_platform,,,,Piccadilly – 5 minutes
+Gloucester Road,interchange,,,,Circle to District – 4 minutes
+Gloucester Road,interchange,,,,Circle to Piccadilly – 7 minutes
+Gloucester Road,interchange,,,,District to Piccadilly – 7 minutes
+Golders Green,gate_to_platform,,,,2 minutes
+Goldhawk Road,gate_to_platform,,,,2 minutes
+Goodge Street,gate_to_platform,,,,5 minutes
+Gospel Oak,gate_to_platform,London Overground,,3,
+Gospel Oak,gate_to_platform,Barking line,,3,
+Gospel Oak,gate_to_platform,London Overground,,3,
+Gospel Oak,gate_to_platform,NLL,,3,
+Gospel Oak,interchange,Interchange between Barking branch and North London Line,,5,
+Gospel Oak,interchange,Interchange between Barking branch and North London Line,,5,
+Grange Hill,gate_to_platform,,,,2 minutes
+Great Portland Street,gate_to_platform,,,,2 minutes
+Great Portland Street,interchange,"Connections between Metropolitan, Hammersmith & City and Circle line trains",,4,
+Greenford,gate_to_platform,First Great Western,,2,
+Greenford,gate_to_platform,First Great Western,,2,
+Greenford,interchange,Connections between Central line and First Great Western services,,4,
+Greenford,interchange,Connections between Central line and First Great Western services,,4,
+Green Park,gate_to_platform,Jubilee,,5,
+Green Park,gate_to_platform,Piccadilly,,3,
+Green Park,gate_to_platform,Victoria,,2,
+Green Park,interchange,Jubilee,Piccadilly,55,
+Green Park,interchange,Jubilee,Victoria,45,
+Green Park,interchange,Piccadilly,Victoria,4,
+Greenwich,gate_to_platform,DLR,,55,
+Greenwich,gate_to_platform,Southeastern,,5,
+Greenwich,interchange,DLR,Southeastern,5,
+Greenwich,interchange,DLR,Southeastern,5,
+Gunnersbury,gate_to_platform,District,,2,
+Gunnersbury,gate_to_platform,London Overground,,2,
+Gunnersbury,interchange,Connections between District line and London Overground services,,4,
+Gunnersbury,interchange,Connections between District line and London Overground services,,4,
+Hackney Central,gate_to_platform,,,,2 minutes
+Hackney Wick,gate_to_platform,,,,2 minutes
+Haggerston,gate_to_platform,,,,1 minute
+Hainault,gate_to_platform,,,,2 minutes
+Hammersmith District and Piccadilly lines,gate_to_platform,District,,2,
+Hammersmith District and Piccadilly lines,gate_to_platform,Piccadilly,,2,
+Hammersmith District and Piccadilly lines,interchange,District,Piccadilly,4,
+Hammersmith District and Piccadilly lines,interchange,District,Piccadilly,4,
+Hammersmith Hammersmith & City line,gate_to_platform,,,,2 minutes
+Hampstead,gate_to_platform,,,,5 minutes
+Hampstead Heath,gate_to_platform,,,,2 minutes
+Hanger Lane,gate_to_platform,,,,1.5 minutes
+Harlesden,gate_to_platform,Bakerloo,,15,
+Harlesden,gate_to_platform,London Overground,,15,
+Harlesden,interchange,Connections between Bakerloo line and London Overground services,,5,
+Harlesden,interchange,Connections between Bakerloo line and London Overground services,,5,
+Harringay Green Lanes,gate_to_platform,,,,3 minutes
+Harringay Green Lanes,interchange,,,,Step-free access via ramps between street and platforms
+Harrow & Wealdstone,gate_to_platform,Bakerloo,,2,
+Harrow & Wealdstone,gate_to_platform,London Overground and all National Rail,,2,
+Harrow & Wealdstone,interchange,Bakerloo,London Overground and all National Rail,5,
+Harrow & Wealdstone,interchange,London Overground,National Rail,5,
+Harrow-On-The-Hill,gate_to_platform,Chiltern Railways,,2,
+Harrow-On-The-Hill,gate_to_platform,Metropolitan,,2,
+Harrow-On-The-Hill,interchange,Chiltern Railways,Metropolitan,4,
+Harrow-On-The-Hill,interchange,Metropolitan (different branches),,4,
+Hatton Cross,gate_to_platform,,,,2 minutes
+Hatton Cross,interchange,Piccadilly (different branches),,2,
+Hatch End,gate_to_platform,,,,2 minutes
+Headstone Lane,gate_to_platform,,,,2 minutes
+Heathrow Terminals 123 London Underground,gate_to_platform,,,,2 minutes
+Heathrow Terminals 123 London Underground,interchange,Piccadilly (different branches),,2,
+Heathrow Terminal 4,gate_to_platform,,,,1 minute
+Heathrow Terminal  5,gate_to_platform,Heathrow Express,,7,
+Heathrow Terminal  5,gate_to_platform,Piccadilly line,,2,
+Heathrow Terminal  5,interchange,Heathrow Express,Piccadilly line,5,
+Heathrow Terminal  5,interchange,Heathrow Express,Piccadilly line,5,
+Heron Quays,gate_to_platform,,,,1 minute
+Heron Quays,interchange,Interchange with Canary Wharf LU station,,5,
+High Barnet,gate_to_platform,,,,2 minutes
+Highbury & Islington,gate_to_platform,First Capital Connect,,4,
+Highbury & Islington,gate_to_platform,London Overground,,4,
+Highbury & Islington,gate_to_platform,Victoria,,2,
+Highbury & Islington,interchange,First Capital Connect,London Overground,6,
+Highbury & Islington,interchange,First Capital Connect,Victoria,4,
+Highbury & Islington,interchange,London Overground,Victoria,6,
+Highbury & Islington,interchange,London Overground (different branches),,5,
+Highgate,gate_to_platform,,,,2 minutes
+High Street Kensington,gate_to_platform,Circle,,2,
+High Street Kensington,gate_to_platform,District,,2,
+High Street Kensington,interchange,Circle,District,4,
+High Street Kensington,interchange,District (different branches),,4,
+Hillingdon,gate_to_platform,Metropolitan,,2,
+Hillingdon,gate_to_platform,Piccadilly,,2,
+Hillingdon,interchange,Connections between Metropolitan and Piccadilly line,,4,
+Hillingdon,interchange,Connections between Metropolitan and Piccadilly line,,4,
+Holborn,gate_to_platform,Central,,4,
+Holborn,gate_to_platform,Piccadilly,,6,
+Holborn,interchange,Central,Piccadilly,6,
+Holborn,interchange,Central,Piccadilly,6,
+Holland Park,gate_to_platform,,,,4 minutes
+Holloway Road,gate_to_platform,,,,3 minutes
+Homerton,gate_to_platform,,,,4 minutes
+Honor Oak Park,gate_to_platform,London Overground: 2 minutes. Southern,,2,
+Honor Oak Park,interchange,Connections between London Overground and Southern,,4,
+Honor Oak Park,interchange,Connections between London Overground and Southern,,4,
+Hornchurch,gate_to_platform,,,,2 minutes
+Hounslow Central,gate_to_platform,,,,2 minutes
+Hounslow East,gate_to_platform,,,,2 minutes
+Hounslow West,gate_to_platform,,,,2 minutes
+Hoxton,gate_to_platform,,,,1 minute
+Hyde Park Corner,gate_to_platform,,,,2 minutes
+Ickenham,gate_to_platform,Metropolitan,,2,
+Ickenham,gate_to_platform,Piccadilly,,2,
+Ickenham,interchange,Connections between Metropolitan and Piccadilly line,,4,
+Ickenham,interchange,Connections between Metropolitan and Piccadilly line,,4,
+Imperial Wharf,gate_to_platform,London Overground,,2,
+Imperial Wharf,gate_to_platform,Southern,,2,
+Imperial Wharf,interchange,London Overground,Southern,5,
+Imperial Wharf,interchange,London Overground,Southern,5,
+Kennington,gate_to_platform,,,,4 minutes
+Kennington,interchange,Connections between different branches,,2,
+Kensal Green,gate_to_platform,Bakerloo,,2,
+Kensal Green,gate_to_platform,London Overground,,2,
+Kensal Green,interchange,Connections between Bakerloo line and London Overground services,,5,
+Kensal Green,interchange,Connections between Bakerloo line and London Overground services,,5,
+Kensal Rise,gate_to_platform,,,,2 minutes
+Kensington Olympia,gate_to_platform,District,,1,
+Kensington Olympia,gate_to_platform,London Overground and National Rail,,3,
+Kensington Olympia,interchange,District,London Overground and National Rail,3,
+Kensington Olympia,interchange,London Overground,National Rail,5,
+Kentish Town,gate_to_platform,First Capital Connect,,3,
+Kentish Town,gate_to_platform,Northern,,3,
+Kentish Town,interchange,First Capital Connect,Northern,6,
+Kentish Town,interchange,First Capital Connect,Northern,6,
+Kentish Town West,gate_to_platform,,,,2 minutes
+Kenton,gate_to_platform,Bakerloo,,2,
+Kenton,gate_to_platform,London Overground,,2,
+Kenton,interchange,Connections between Bakerloo line and London Overground services,,5,
+Kenton,interchange,Connections between Bakerloo line and London Overground services,,5,
+Kew Gardens,gate_to_platform,District,,3,
+Kew Gardens,gate_to_platform,London Overground,,3,
+Kew Gardens,interchange,Connections between District line and London Overground services,,5,
+Kew Gardens,interchange,Connections between District line and London Overground services,,5,
+Kilburn,gate_to_platform,,,,3 minutes
+Kilburn High Road,gate_to_platform,,,,2 minutes
+Kilburn Park,gate_to_platform,,,,2 minutes
+Kingsbury,gate_to_platform,,,,2 minutes
+Kings Cross St.Pancras,gate_to_platform,Circle,,2,
+Kings Cross St.Pancras,gate_to_platform,Hammersmith & City,,2,
+Kings Cross St.Pancras,gate_to_platform,Metropolitan,,2,
+Kings Cross St.Pancras,gate_to_platform,Northern,,55,
+Kings Cross St.Pancras,gate_to_platform,Piccadilly,,3,
+Kings Cross St.Pancras,gate_to_platform,Victoria,,3,
+Kings Cross St.Pancras,gate_to_platform,National Rail (concourse),,5,
+Kings Cross St.Pancras,interchange,Circle,Hammersmith & City,2,
+Kings Cross St.Pancras,interchange,Circle,Metropolitan,2,
+Kings Cross St.Pancras,interchange,Circle,Northern,75,
+Kings Cross St.Pancras,interchange,Circle,Piccadilly,5,
+Kings Cross St.Pancras,interchange,Circle,Victoria,5,
+Kings Cross St.Pancras,interchange,Circle,National Rail,12,
+Kings Cross St.Pancras,interchange,Hammersmith & City,Metropolitan,2,
+Kings Cross St.Pancras,interchange,Hammersmith & City,Northern,75,
+Kings Cross St.Pancras,interchange,Hammersmith & City,Piccadilly,5,
+Kings Cross St.Pancras,interchange,Hammersmith & City,Victoria,5,
+Kings Cross St.Pancras,interchange,Hammersmith & City,National Rail,12,
+Kings Cross St.Pancras,interchange,Metropolitan,Northern,75,
+Kings Cross St.Pancras,interchange,Metropolitan,Piccadilly,5,
+Kings Cross St.Pancras,interchange,Metropolitan,Victoria,5,
+Kings Cross St.Pancras,interchange,Metropolitan,National Rail,12,
+Kings Cross St.Pancras,interchange,Northern,Piccadilly,25,
+Kings Cross St.Pancras,interchange,Northern,Victoria,45,
+Kings Cross St.Pancras,interchange,Northern,National Rail,95,
+Kings Cross St.Pancras,interchange,Piccadilly,Victoria,2,
+Kings Cross St.Pancras,interchange,Piccadilly,National Rail,10,
+Kings Cross St.Pancras,interchange,Victoria,National Rail,12,
+King George V,gate_to_platform,,,,2 minutes
+Knightsbridge,gate_to_platform,,,,3 minutes
+Ladbroke Grove,gate_to_platform,Circle,,2,
+Ladbroke Grove,gate_to_platform,Hammersmith & City,,2,
+Ladbroke Grove,interchange,Connections between Circle and Hammersmith & City,,4,
+Ladbroke Grove,interchange,Connections between Circle and Hammersmith & City,,4,
+Lambeth North,gate_to_platform,,,,4 minutes
+Lancaster Gate,gate_to_platform,,,,4 minutes
+Langdon Park,gate_to_platform,,,,2 minutes
+Latimer Road,gate_to_platform,Circle,,2,
+Latimer Road,gate_to_platform,Hammersmith & City,,2,
+Latimer Road,interchange,Connections between Circle and Hammersmith & City,,4,
+Latimer Road,interchange,Connections between Circle and Hammersmith & City,,4,
+Leicester Square,gate_to_platform,Northern,,3,
+Leicester Square,gate_to_platform,Piccadilly,,3,
+Leicester Square,interchange,Northern,Piccadilly,4,
+Leicester Square,interchange,Northern,Piccadilly,4,
+Lewisham,gate_to_platform,DLR,,3,
+Lewisham,gate_to_platform,Southeastern,,3,
+Lewisham,interchange,DLR,Southeastern,7,
+Lewisham,interchange,DLR,Southeastern,7,
+Leyton,gate_to_platform,,,,2 minutes
+Leyton Midland Road,gate_to_platform,,,,2 minutes
+Leytonstone,gate_to_platform,,,,2 minutes
+Leytonstone,interchange,Connections between different branches,,4,
+Leytonstone High Road,gate_to_platform,,,,2 minutes
+Limehouse,gate_to_platform,C2C,,3,
+Limehouse,gate_to_platform,DLR,,2,
+Limehouse,interchange,C2C,DLR,5,
+Limehouse,interchange,C2C,DLR,5,
+Liverpool Street,gate_to_platform,Central,,2,
+Liverpool Street,gate_to_platform,Circle,,4,
+Liverpool Street,gate_to_platform,Hammersmith & City,,4,
+Liverpool Street,gate_to_platform,Metropolitan,,4,
+Liverpool Street,gate_to_platform,National Rail (concourse),,4,
+Liverpool Street,interchange,Central,Circle,6,
+Liverpool Street,interchange,Central,Hammersmith & City,6,
+Liverpool Street,interchange,Central,Metropolitan,6,
+Liverpool Street,interchange,Central,National Rail,6,
+Liverpool Street,interchange,Circle,Hammersmith & City,4,
+Liverpool Street,interchange,Circle,Metropolitan,4,
+Liverpool Street,interchange,Circle,National Rail,8,
+Liverpool Street,interchange,Hammersmith & City,Metropolitan,4,
+Liverpool Street,interchange,Hammersmith & City,National Rail,8,
+Liverpool Street,interchange,Metropolitan,National Rail,8,
+London Bridge,gate_to_platform,Jubilee,,3,
+London Bridge,gate_to_platform,Northern,,7,
+London Bridge,gate_to_platform,National Rail,,5,
+London Bridge,interchange,Jubilee,Northern,6,
+London Bridge,interchange,Jubilee,National Rail,7,
+London Bridge,interchange,Northern,National Rail,10,
+London City Airport,gate_to_platform,,,,2 minutes
+Loughton,gate_to_platform,,,,2 minutes
+Maida Vale,gate_to_platform,,,,2 minutes
+Manor House,gate_to_platform,,,,2 minutes
+Mansion House,gate_to_platform,Circle,,2,
+Mansion House,gate_to_platform,District,,2,
+Mansion House,interchange,Circle,District,4,
+Mansion House,interchange,Circle,District,4,
+Marble Arch,gate_to_platform,,,,4 minutes
+Marylebone,gate_to_platform,Bakerloo,,4,
+Marylebone,gate_to_platform,Chiltern Railways,,5,
+Marylebone,interchange,Bakerloo,Chiltern Railways,9,
+Marylebone,interchange,Bakerloo,Chiltern Railways,9,
+Mile End,gate_to_platform,,,,1.5 minutes
+Mile End,gate_to_platform,,,,1.5 minutes
+Mile End,gate_to_platform,,,,1.5 minutes
+Mile End,interchange,Central,District,3,
+Mile End,interchange,Central,Hammersmith & City,3,
+Mile End,interchange,District,Hammersmith & City,3,
+Mill Hill East,gate_to_platform,,,,2 minutes
+"Monument, includes interchange values with Bank",gate_to_platform,Circle,,2,
+"Monument, includes interchange values with Bank",gate_to_platform,District,,2,
+"Monument, includes interchange values with Bank",interchange,Central,Circle,7,
+"Monument, includes interchange values with Bank",interchange,Central,District,7,
+"Monument, includes interchange values with Bank",interchange,Central,DLR,3,
+"Monument, includes interchange values with Bank",interchange,Central,Northern,4,
+"Monument, includes interchange values with Bank",interchange,Central,Waterloo & City,45,
+"Monument, includes interchange values with Bank",interchange,Circle,District,4,
+"Monument, includes interchange values with Bank",interchange,Circle,DLR,4,
+"Monument, includes interchange values with Bank",interchange,Circle,Northern,4,
+"Monument, includes interchange values with Bank",interchange,Circle,Waterloo & City,10,
+"Monument, includes interchange values with Bank",interchange,District,DLR,4,
+"Monument, includes interchange values with Bank",interchange,District,Northern,4,
+"Monument, includes interchange values with Bank",interchange,District,Waterloo & City,10,
+"Monument, includes interchange values with Bank",interchange,DLR,Northern,3,
+"Monument, includes interchange values with Bank",interchange,DLR,Waterloo & City,6,
+"Monument, includes interchange values with Bank",interchange,Northern,Waterloo & City,7,
+Moorgate (including First Capital Connect),gate_to_platform,Circle,,4,
+Moorgate (including First Capital Connect),gate_to_platform,Hammersmith & City,,4,
+Moorgate (including First Capital Connect),gate_to_platform,Metropolitan,,4,
+Moorgate (including First Capital Connect),gate_to_platform,Northern,,5,
+Moorgate (including First Capital Connect),gate_to_platform,First Capital Connect,,4,
+Moorgate (including First Capital Connect),interchange,Circle,Hammersmith & City,4,
+Moorgate (including First Capital Connect),interchange,Circle,Metropolitan,4,
+Moorgate (including First Capital Connect),interchange,Circle,Northern,7,
+Moorgate (including First Capital Connect),interchange,Circle,First Capital Connect,6,
+Moorgate (including First Capital Connect),interchange,Hammersmith & City,Metropolitan,4,
+Moorgate (including First Capital Connect),interchange,Hammersmith & City,Northern,7,
+Moorgate (including First Capital Connect),interchange,Hammersmith & City,First Capital Connect,6,
+Moorgate (including First Capital Connect),interchange,Metropolitan,Northern,7,
+Moorgate (including First Capital Connect),interchange,Metropolitan,First Capital Connect,6,
+Moorgate (including First Capital Connect),interchange,Northern,First Capital Connect,2,
+Moor Park,gate_to_platform,,,,1.5 minutes
+Moor Park,interchange,Connections between different branches,,3,
+Morden,gate_to_platform,,,,2 minutes
+Mornington Crescent,gate_to_platform,,,,4 minutes
+Mudchute,gate_to_platform,,,,2 minutes
+Neasden,gate_to_platform,,,,2 minutes
+Newbury Park,gate_to_platform,,,,2 minutes
+New Cross,gate_to_platform,London Overground,,3,
+New Cross,gate_to_platform,Southeastern,,3,
+New Cross,interchange,London Overground,Southeastern,4,
+New Cross,interchange,London Overground,Southeastern,4,
+New Cross Gate,gate_to_platform,London Overground,,3,
+New Cross Gate,gate_to_platform,Southern,,3,
+New Cross Gate,interchange,London Overground,Southern,4,
+New Cross Gate,interchange,London Overground,Southern,4,
+North Acton,gate_to_platform,,,,2 minutes
+North Ealing,gate_to_platform,,,,2 minutes
+Northfields,gate_to_platform,,,,2 minutes
+North Greenwich,gate_to_platform,,,,2 minutes
+North Harrow,gate_to_platform,,,,2 minutes
+Northolt,gate_to_platform,,,,2 minutes
+North Wembley,gate_to_platform,Bakerloo,,2,
+North Wembley,gate_to_platform,London Overground,,2,
+North Wembley,interchange,Connections between Bakerloo line and London Overground services,,5,
+North Wembley,interchange,Connections between Bakerloo line and London Overground services,,5,
+Northwick Park,gate_to_platform,,,,2 minutes
+Northwood,gate_to_platform,,,,2 minutes
+Northwood Hills,gate_to_platform,,,,2 minutes
+Norwood Junction,gate_to_platform,London Overground,,2,
+Norwood Junction,gate_to_platform,Southern,,2,
+Norwood Junction,interchange,London Overground,Southern,2,
+Norwood Junction,interchange,London Overground,Southern,2,
+Notting Hill Gate,gate_to_platform,Central,,6,
+Notting Hill Gate,gate_to_platform,Circle,,2,
+Notting Hill Gate,gate_to_platform,District,,2,
+Notting Hill Gate,interchange,Central,Circle,4,
+Notting Hill Gate,interchange,Central,District,4,
+Notting Hill Gate,interchange,Circle,District,4,
+Oakwood,gate_to_platform,,,,2 minutes
+Old Street,gate_to_platform,First Capital Connect,,3,
+Old Street,gate_to_platform,Northern,,3,
+Old Street,interchange,First Capital Connect,Northern,3,
+Old Street,interchange,First Capital Connect,Northern,3,
+Osterley,gate_to_platform,,,,2 minutes
+Oval,gate_to_platform,,,,3 minutes
+Oxford Circus,gate_to_platform,Bakerloo,,4,
+Oxford Circus,gate_to_platform,Central,,4,
+Oxford Circus,gate_to_platform,Victoria,,4,
+Oxford Circus,interchange,Bakerloo,Central,4,
+Oxford Circus,interchange,Bakerloo,Victoria,4,
+Oxford Circus,interchange,Central,Victoria,4,
+Paddington,gate_to_platform,Bakerloo,,5,
+Paddington,gate_to_platform,Circle,,2,
+Paddington,gate_to_platform,District line platform,,2,
+Paddington,gate_to_platform,District,,2,
+Paddington,gate_to_platform,Hammersmith & City platform,,5,
+Paddington,gate_to_platform,National Rail,,4,
+Paddington,interchange,Bakerloo,Circle,7,
+Paddington,interchange,Bakerloo,District,7,
+Paddington,interchange,Bakerloo,Hammersmith & City,15,
+Paddington,interchange,Bakerloo,National Rail,8,
+Paddington,interchange,Circle,District,4,
+Paddington,interchange,Circle,Hammersmith & City,13,
+Paddington,interchange,Circle,National Rail,6,
+Paddington,interchange,District,Hammersmith & City,13,
+Paddington,interchange,District,National Rail,6,
+Paddington,interchange,Hammersmith & City,National Rail,5,
+Park Royal,gate_to_platform,,,,2 minutes
+Parsons Green,gate_to_platform,,,,2 minutes
+Penge West,gate_to_platform,London Overground,,2,
+Penge West,gate_to_platform,Southern,,2,
+Penge West,interchange,Connections between London Overground and Southern,,4,
+Penge West,interchange,Connections between London Overground and Southern,,4,
+Perivale,gate_to_platform,,,,2 minutes
+Piccadilly Circus,gate_to_platform,Bakerloo,,5,
+Piccadilly Circus,gate_to_platform,Piccadilly,,5,
+Piccadilly Circus,interchange,Bakerloo,Piccadilly,3,
+Piccadilly Circus,interchange,Bakerloo,Piccadilly,3,
+Pimlico,gate_to_platform,,,,2 minutes
+Pinner,gate_to_platform,,,,3 minutes
+Plaistow,gate_to_platform,,,,2 minutes
+Plaistow,interchange,Connections between District and Hammersmith & City,,4,
+Pontoon Dock,gate_to_platform,,,,1 minute
+Poplar,gate_to_platform,,,,2 minutes
+Poplar,interchange,Connections between different DLR branches,,2,
+Preston Road,gate_to_platform,,,,2 minutes
+Prince Regent,gate_to_platform,,,,1.5 minutes
+Pudding Mill Lane,gate_to_platform,,,,2 minutes
+Putney Bridge,gate_to_platform,,,,2 minutes
+Queensbury,gate_to_platform,,,,2 minutes
+Queens Park,gate_to_platform,Bakerloo,,2,
+Queens Park,gate_to_platform,London Overground,,25,
+Queens Park,interchange,Bakerloo,London Overground,45,
+Queens Park,interchange,Bakerloo,London Overground,45,
+Queensway,gate_to_platform,,,,5 minutes
+Ravenscourt Park,gate_to_platform,,,,2 minutes
+Rayners Lane,gate_to_platform,Metropolitan,,2,
+Rayners Lane,gate_to_platform,Piccadilly,,2,
+Rayners Lane,interchange,Metropolitan,Piccadilly,4,
+Rayners Lane,interchange,Metropolitan,Piccadilly,4,
+Redbridge,gate_to_platform,,,,2 minutes
+Regents Park,gate_to_platform,,,,3 minutes
+Richmond,gate_to_platform,District,,2,
+Richmond,gate_to_platform,London Overground,,2,
+Richmond,gate_to_platform,South West Trains,,2,
+Richmond,interchange,District,London Overground,4,
+Richmond,interchange,District,South West Trains,4,
+Richmond,interchange,London Overground,South West Trains,4,
+Rickmansworth,gate_to_platform,Chiltern Railways,,3,
+Rickmansworth,gate_to_platform,Metropolitan,,3,
+Rickmansworth,interchange,Chiltern Railways,Metropolitan,3,
+Rickmansworth,interchange,Chiltern Railways,Metropolitan,3,
+Roding Valley,gate_to_platform,,,,3 minutes
+Rotherhithe,gate_to_platform,,,,2 minutes
+Royal Albert,gate_to_platform,,,,2 minutes
+Royal Oak,gate_to_platform,Circle,,2,
+Royal Oak,gate_to_platform,Hammersmith & City,,2,
+Royal Oak,interchange,Connections between Circle and Hammersmith & City line,,2,
+Royal Oak,interchange,Connections between Circle and Hammersmith & City line,,2,
+Royal Victoria,gate_to_platform,,,,1.5 minutes
+Ruislip,gate_to_platform,Metropolitan,,3,
+Ruislip,gate_to_platform,Piccadilly,,3,
+Ruislip,interchange,Connections between Metropolitan and Piccadilly line,,3,
+Ruislip,interchange,Connections between Metropolitan and Piccadilly line,,3,
+Ruislip Gardens,gate_to_platform,,,,2 minutes
+Ruislip Manor,gate_to_platform,Metropolitan,,2,
+Ruislip Manor,gate_to_platform,Piccadilly,,2,
+Ruislip Manor,interchange,Connections between Metropolitan and Piccadilly line,,4,
+Ruislip Manor,interchange,Connections between Metropolitan and Piccadilly line,,4,
+Russell Square,gate_to_platform,,,,6 minutes
+St.James’s Park,gate_to_platform,Circle,,2,
+St.James’s Park,gate_to_platform,District,,2,
+St.James’s Park,interchange,Connections between Circle and District lines,,4,
+St.James’s Park,interchange,Connections between Circle and District lines,,4,
+St John’s Wood,gate_to_platform,,,,2 minutes
+St.Pauls,gate_to_platform,,,,4 minutes
+Seven Sisters,gate_to_platform,National Express East Anglia,,10,
+Seven Sisters,gate_to_platform,Victoria,,3,
+Seven Sisters,interchange,National Express East Anglia,Victoria,7,
+Seven Sisters,interchange,National Express East Anglia,Victoria,7,
+Shadwell,gate_to_platform,DLR,,2,
+Shadwell,gate_to_platform,London Overground,,3,
+Shadwell,interchange,DLR,London Overground,5,
+Shadwell,interchange,DLR,London Overground,5,
+Shepherds Bush,gate_to_platform,Central,,3,
+Shepherds Bush,gate_to_platform,London Overground,,3,
+Shepherds Bush,interchange,Central,London Overground,8,
+Shepherds Bush,interchange,Central,London Overground,8,
+Shepherds Bush Market,gate_to_platform,Circle,,2,
+Shepherds Bush Market,gate_to_platform,Hammersmith & City,,2,
+Shepherds Bush Market,interchange,Connections between Circle and Hammersmith & City lines,,4,
+Shepherds Bush Market,interchange,Connections between Circle and Hammersmith & City lines,,4,
+Shoreditch High Street,gate_to_platform,,,,1 minute
+Sloane Square,gate_to_platform,Circle,,2,
+Sloane Square,gate_to_platform,District,,2,
+Sloane Square,interchange,Connections between Circle and District lines,,5,
+Sloane Square,interchange,Connections between Circle and District lines,,5,
+Snaresbrook,gate_to_platform,,,,3 minutes
+South Acton,gate_to_platform,,,,2 minutes
+South Ealing,gate_to_platform,,,,2 minutes
+Southfields,gate_to_platform,,,,2 minutes
+Southgate,gate_to_platform,,,,2 minutes
+South Hampstead,gate_to_platform,,,,2 minutes
+South Harrow,gate_to_platform,,,,2 minutes
+South Kensington,gate_to_platform,Circle,,2,
+South Kensington,gate_to_platform,District,,2,
+South Kensington,gate_to_platform,Piccadilly,,4,
+South Kensington,interchange,Circle,District,2,
+South Kensington,interchange,Circle,Piccadilly,4,
+South Kensington,interchange,District,Piccadilly,4,
+South Kenton,gate_to_platform,Bakerloo,,1,
+South Kenton,gate_to_platform,London Overground,,1,
+South Kenton,interchange,Bakerloo,London Overground,2,
+South Kenton,interchange,Bakerloo,London Overground,2,
+South Quay,gate_to_platform,,,,1 minute
+South Ruislip,gate_to_platform,Central,,2,
+South Ruislip,gate_to_platform,Chiltern Railways,,3,
+South Ruislip,interchange,Central,Chiltern Railways,5,
+South Ruislip,interchange,Central,Chiltern Railways,5,
+South Tottenham,gate_to_platform,,,,2 minutes
+Southwark,gate_to_platform,,,,5 minutes
+South Wimbledon,gate_to_platform,,,,2 minutes
+South Woodford,gate_to_platform,,,,3 minutes
+Stamford Brook,gate_to_platform,,,,2 minutes
+Stanmore,gate_to_platform,,,,1 minute
+Star Lane,gate_to_platform,,,,1 minute
+Stepney Green,gate_to_platform,District,,2,
+Stepney Green,gate_to_platform,Hammersmith & City,,2,
+Stepney Green,interchange,Connections between District and Hammersmith & City line,,4,
+Stepney Green,interchange,Connections between District and Hammersmith & City line,,4,
+Stockwell,gate_to_platform,Northern,,35,
+Stockwell,gate_to_platform,Victoria,,35,
+Stockwell,interchange,Connections between Northern Line and Victoria line trains,,3,
+Stockwell,interchange,Connections between Northern Line and Victoria line trains,,3,
+Stonebridge Park,gate_to_platform,Bakerloo,,3,
+Stonebridge Park,gate_to_platform,London Overground,,3,
+Stonebridge Park,interchange,Connections between Bakerloo and London Overground,,4,
+Stonebridge Park,interchange,Connections between Bakerloo and London Overground,,4,
+Stratford,gate_to_platform,Central,,2,
+Stratford,gate_to_platform,DLR Stratford Int,,3,
+Stratford,gate_to_platform,DLR Canary Wharf,,25,
+Stratford,gate_to_platform,London Overground,,4,
+Stratford,gate_to_platform,National Express East Anglia,,4,
+Stratford,interchange,Central,DLR Stratford Int,4,
+Stratford,interchange,Central,DLR Canary Wharf,3,
+Stratford,interchange,Central,London Overground,5,
+Stratford,interchange,Central,National Express East Anglia,5,
+Stratford,interchange,DLR Stratford Int,DLR Canary Wharf,45,
+Stratford,interchange,DLR Stratford Int,London Overground,6,
+Stratford,interchange,DLR Stratford Int,National Express East Anglia,6,
+Stratford,interchange,DLR Canary Wharf,London Overground,6,
+Stratford,interchange,DLR Canary Wharf,National Express East Anglia,6,
+Stratford,interchange,London Overground,National Express East Anglia,7,
+Stratford International,gate_to_platform,DLR,,3,
+Stratford International,gate_to_platform,Southeastern,,3,
+Stratford International,interchange,DLR,Southeastern,6,
+Stratford International,interchange,DLR,Southeastern,6,
+Sudbury Hill,gate_to_platform,,,,2 minutes
+Sudbury Town,gate_to_platform,,,,3 minutes
+Surrey Quays,gate_to_platform,,,,3 minutes
+Swiss Cottage,gate_to_platform,,,,2 minutes
+Sydenham,gate_to_platform,London Overground,,2,
+Sydenham,gate_to_platform,Southern,,2,
+Sydenham,interchange,Connections between London Overground and Southern,,4,
+Sydenham,interchange,Connections between London Overground and Southern,,4,
+Temple,gate_to_platform,Circle,,2,
+Temple,gate_to_platform,District,,2,
+Temple,interchange,Connections between Circle and District,,4,
+Temple,interchange,Connections between Circle and District,,4,
+Theydon Bois,gate_to_platform,,,,3 minutes
+Tooting Bec,gate_to_platform,,,,2 minutes
+Tooting Broadway,gate_to_platform,,,,2 minutes
+Tottenham Court Road,gate_to_platform,Central,,4,
+Tottenham Court Road,gate_to_platform,Northern,,4,
+Tottenham Court Road,interchange,Central,Northern,4,
+Tottenham Court Road,interchange,Central,Northern,4,
+Tottenham Hale,gate_to_platform,National Express East Anglia,,3,
+Tottenham Hale,gate_to_platform,Victoria,,5,
+Tottenham Hale,interchange,National Express East Anglia,Victoria,5,
+Tottenham Hale,interchange,National Express East Anglia,Victoria,5,
+Totteridge & Whetstone,gate_to_platform,,,,2 minutes
+Tower Gateway,gate_to_platform,,,,3 minutes
+Tower Hill,gate_to_platform,Circle,,1,
+Tower Hill,gate_to_platform,District,,1,
+Tower Hill,interchange,"Connections between Circle and District, and with terminating District",,2,
+Tower Hill,interchange,"Connections between Circle and District, and with terminating District",,2,
+Tufnell Park,gate_to_platform,,,,3 minutes
+Turnham Green,gate_to_platform,District,,2,
+Turnham Green,gate_to_platform,Piccadilly,,2,
+Turnham Green,interchange,District (between branches),,4,
+Turnham Green,interchange,District,Piccadilly,4,
+Turnpike Lane,gate_to_platform,,,,2 minutes
+Upminster,gate_to_platform,C2C,,25,
+Upminster,gate_to_platform,District,,2,
+Upminster,gate_to_platform,National Express East Anglia,,25,
+Upminster,interchange,C2C,District,45,
+Upminster,interchange,C2C,National Express East Anglia,5,
+Upminster,interchange,District,National Express East Anglia,45,
+Upminster Bridge,gate_to_platform,,,,2 minutes
+Upney,gate_to_platform,,,,2 minutes
+Upper Holloway,gate_to_platform,,,,4 minutes
+Upton Park,gate_to_platform,,,,4 minutes
+Upton Park,interchange,District,Hammersmith & City,4,
+Uxbridge,gate_to_platform,Metropolitan,,1,
+Uxbridge,gate_to_platform,Piccadilly,,1,
+Uxbridge,interchange,Metropolitan,Piccadilly,1,
+Uxbridge,interchange,Metropolitan,Piccadilly,1,
+Vauxhall,gate_to_platform,,,,South West Trains
+Vauxhall,gate_to_platform,Victoria,,2,
+Vauxhall,interchange,South West Trains,Victoria,9,
+Vauxhall,interchange,South West Trains,Victoria,9,
+Victoria,gate_to_platform,Circle,,3,
+Victoria,gate_to_platform,District,,3,
+Victoria,gate_to_platform,,,,Southern (inc Gatwick Express)
+Victoria,gate_to_platform,,,,Southeastern
+Victoria,gate_to_platform,Victoria,,3,
+Victoria,interchange,Circle,District,2,
+Victoria,interchange,Circle,Southern,10,
+Victoria,interchange,Circle,Southeastern,10,
+Victoria,interchange,Circle,Victoria,4,
+Victoria,interchange,District,Southern,10,
+Victoria,interchange,District,Southeastern,10,
+Victoria,interchange,District,Victoria,4,
+Victoria,interchange,Southern,Southeastern,10,
+Victoria,interchange,Southern,Victoria,10,
+Victoria,interchange,Southeastern,Victoria,10,
+Walthamstow Central,gate_to_platform,National Express East Anglia,,3,
+Walthamstow Central,gate_to_platform,Victoria,,3,
+Walthamstow Central,interchange,National Express East Anglia,Victoria,4,
+Walthamstow Central,interchange,National Express East Anglia,Victoria,4,
+Walthamstow Queens Road,gate_to_platform,,,,3 minutes
+Wanstead,gate_to_platform,,,,2 minutes
+Wanstead Park,gate_to_platform,,,,2 minutes
+Wapping,gate_to_platform,,,,4 minutes
+Warren Street,gate_to_platform,Northern,,6,
+Warren Street,gate_to_platform,Victoria,,4,
+Warren Street,interchange,Northern,Victoria,6,
+Warren Street,interchange,Northern,Victoria,6,
+Warwick Avenue,gate_to_platform,,,,2 minutes
+Waterloo,gate_to_platform,Bakerloo,,6,
+Waterloo,gate_to_platform,Jubilee,,6,
+Waterloo,gate_to_platform,Northern,,6,
+Waterloo,gate_to_platform,South West Trains,,6,
+Waterloo,interchange,Bakerloo,Jubilee,6,
+Waterloo,interchange,Bakerloo,Northern,4,
+Waterloo,interchange,Bakerloo,South West Trains,10,
+Waterloo,interchange,Jubilee,Northern,6,
+Waterloo,interchange,Jubilee,South West Trains,11,
+Waterloo,interchange,Northern,South West Trains,10,
+Watford High Street,gate_to_platform,,,,2 minutes
+Watford,gate_to_platform,,,,2 minutes
+Watford Junction,gate_to_platform,London Overground,,4,
+Watford Junction,gate_to_platform,London Midland,,4,
+Watford Junction,gate_to_platform,Southern,,4,
+Watford Junction,gate_to_platform,Virgin Trains,,4,
+Watford Junction,interchange,London Overground,London Midland,5,
+Watford Junction,interchange,London Overground,Southern,5,
+Watford Junction,interchange,London Overground,Virgin Trains,5,
+Watford Junction,interchange,London Midland,Southern,5,
+Watford Junction,interchange,London Midland,Virgin Trains,5,
+Watford Junction,interchange,Southern,Virgin Trains,5,
+Wembley Central,gate_to_platform,Bakerloo,,25,
+Wembley Central,gate_to_platform,London Overground,,25,
+Wembley Central,gate_to_platform,Southern,,25,
+Wembley Central,interchange,Bakerloo,London Overground,5,
+Wembley Central,interchange,Bakerloo,Southern,5,
+Wembley Central,interchange,London Overground,Southern,5,
+Wembley Park,gate_to_platform,Jubilee,,2,
+Wembley Park,gate_to_platform,Metropolitan,,2,
+Wembley Park,interchange,Jubilee,Metropolitan,4,
+Wembley Park,interchange,Jubilee,Metropolitan,4,
+West Acton,gate_to_platform,,,,2 minutes
+Westbourne Park,gate_to_platform,Circle,,2,
+Westbourne Park,gate_to_platform,Hammersmith & City,,2,
+Westbourne Park,interchange,Connections between Circle and Hammersmith & City lines,,4,
+Westbourne Park,interchange,Connections between Circle and Hammersmith & City lines,,4,
+West Brompton,gate_to_platform,District,,2,
+West Brompton,gate_to_platform,London Overground,,3,
+West Brompton,gate_to_platform,Southern,,3,
+West Brompton,interchange,District,London Overground,5,
+West Brompton,interchange,District,Southern,5,
+West Brompton,interchange,London Overground,Southern,5,
+West Croydon,gate_to_platform,London Overground,,2,
+West Croydon,gate_to_platform,Southern,,2,
+West Croydon,interchange,London Overground,Southern,4,
+West Croydon,interchange,London Overground,Southern,4,
+Westferry,gate_to_platform,,,,2 minutes
+Westferry,interchange,Interchange between different DLR branches,,4,
+West Finchley,gate_to_platform,,,,3 minutes
+West Ham,gate_to_platform,C2C,,25,
+West Ham,gate_to_platform,District,,2,
+West Ham,gate_to_platform,DLR,,3,
+West Ham,gate_to_platform,Hammersmith & City,,2,
+West Ham,gate_to_platform,Jubilee,,3,
+West Ham,interchange,C2C,District,45,
+West Ham,interchange,C2C,DLR,55,
+West Ham,interchange,C2C,Hammersmith & City,45,
+West Ham,interchange,C2C,Jubilee,55,
+West Ham,interchange,District,DLR,5,
+West Ham,interchange,District,Hammersmith & City,5,
+West Ham,interchange,District,Jubilee,5,
+West Ham,interchange,DLR,Hammersmith & City,5,
+West Ham,interchange,DLR,Jubilee,3,
+West Ham,interchange,,,,Hammersmith & City to Jubilee
+West Hampstead,gate_to_platform,Jubilee,,1,
+West Hampstead,gate_to_platform,London Overground,,15,
+West Hampstead,interchange,Jubilee,London Overground,35,
+West Hampstead,interchange,Jubilee,London Overground,35,
+West Harrow,gate_to_platform,,,,2 minutes
+West India Quay,gate_to_platform,,,,3 minutes
+West India Quay,interchange,,,,Interchange between different DLR branches
+West Kensington,gate_to_platform,,,,2 minutes
+Westminster,gate_to_platform,Circle,,2,
+Westminster,gate_to_platform,District,,2,
+Westminster,gate_to_platform,Jubilee,,6,
+Westminster,interchange,Circle,District,4,
+Westminster,interchange,Circle,Jubilee,6,
+Westminster,interchange,District,Jubilee,6,
+West Ruislip,gate_to_platform,Central,,2,
+West Ruislip,gate_to_platform,Chiltern Railways,,3,
+West Ruislip,interchange,Central,Chiltern Railways,5,
+West Ruislip,interchange,Central,Chiltern Railways,5,
+West Silvertown,gate_to_platform,,,,1 minute
+Whitechapel,gate_to_platform,Hammersmith & City,,3,
+Whitechapel,gate_to_platform,District,,3,
+Whitechapel,gate_to_platform,London Overground,,2,
+Whitechapel,interchange,Hammersmith & City,District,2,
+Whitechapel,interchange,Hammersmith & City,London Overground,5,
+Whitechapel,interchange,District,London Overground,5,
+White City,gate_to_platform,,,,2 minutes
+Willesden Green,gate_to_platform,,,,2 minutes
+Willesden Junction,gate_to_platform,Bakerloo,,2,
+Willesden Junction,gate_to_platform,London Overground (Watford),,2,
+Willesden Junction,gate_to_platform,London Overground (North/West London Lines),,6,
+Willesden Junction,interchange,Bakerloo,London Overground (Watford),4,
+Willesden Junction,interchange,Bakerloo,London Overground (North/West London Lines),5,
+Willesden Junction,interchange,London Overground (Watford),London Overground (North/West London Lines),5,
+Willesden Junction,interchange,London Overground (between North and West London Lines),,3,
+Wimbledon,gate_to_platform,District,,2,
+Wimbledon,gate_to_platform,South West Trains,,3,
+Wimbledon,gate_to_platform,Tramlink,,2,
+Wimbledon,interchange,District,South West Trains,5,
+Wimbledon,interchange,District,Tramlink,4,
+Wimbledon,interchange,South West Trains,Tramlink,5,
+Wimbledon Park,gate_to_platform,,,,2 minutes
+Woodford,gate_to_platform,,,,3 minutes
+Woodford,interchange,Connections between different branches,,3,
+Woodgrange Park,gate_to_platform,,,,4 minutes
+Wood Green,gate_to_platform,,,,2 minutes
+Wood Lane,gate_to_platform,,,,2 minutes
+Woodside Park,gate_to_platform,,,,3 minutes
+Woolwich Arsenal,gate_to_platform,DLR,,4,
+Woolwich Arsenal,gate_to_platform,Southeastern,,4,
+Woolwich Arsenal,interchange,DLR,Southeastern,4,
