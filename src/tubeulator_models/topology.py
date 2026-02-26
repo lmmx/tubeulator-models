@@ -295,6 +295,14 @@ _SLUG_OVERRIDES: dict[str, str] = {
     "docklands-light-railway": "dlr",
 }
 
+# Interchange dataset name (post-normalize) → GTFS name (post-normalize)
+# Only needed where naming conventions diverge completely.
+_IC_STATION_ALIASES: dict[str, str] = {
+    "edgware road circle": "edgware road (circle line)",
+    "hammersmith district and piccadilly lines": "hammersmith (dist&picc line)",
+    "hammersmith hammersmith & city line": "hammersmith (h&c line)",
+}
+
 
 def _slugify_line(name: str) -> str:
     """Convert a GTFS route name to a TfL API-style line slug."""
@@ -308,14 +316,31 @@ def _slugify_line(name: str) -> str:
 
 def _normalize_station_name(name: str) -> str:
     s = name.lower().strip()
+    # "Bank, including Monument interchange values" → "bank"
+    if "," in s:
+        s = s.split(",", 1)[0].strip()
+    # "Moorgate (including First Capital Connect)" → "moorgate"
+    import re
+
+    s = re.sub(r"\s*\((?:including|inc\.?)\b[^)]*\)", "", s).strip()
     for suffix in (
+        "-underground",
+        " london underground",
         " underground station",
+        " underground",
         " rail station",
         " dlr station",
         " station",
     ):
         if s.endswith(suffix):
             s = s[: -len(suffix)]
+            break
+    # Apostrophes: Earl's → Earls, King's → Kings
+    s = s.replace("'", "")
+    s = s.replace("\u2019", "")  # right single quote
+    # Periods: St. → St, then collapse whitespace
+    s = s.replace(".", " ")
+    s = " ".join(s.split())
     return s.strip()
 
 
@@ -384,34 +409,98 @@ def floyd_warshall_with_transfers(
         return [ln2i[r] for r in routes if r in ln2i]
 
     # ── Station matching ──────────────────────────────────────
-    name_to_stop: dict[str, str] = {}
-    for stop_id in stations:
-        name = topo.stop_names.get(stop_id, "")
-        if name:
-            name_to_stop[_normalize_station_name(name)] = stop_id
+    # Build normalized-name → station index from multiple sources
+    # to handle GTFS parent/child ID mismatches.
+    name_to_idx: dict[str, int] = {}
+
+    # 1. Direct: ordered station stop_ids looked up in stop_names
+    n_direct = 0
+    for si, stop_id in enumerate(stations):
+        raw = topo.stop_names.get(stop_id, "")
+        if raw:
+            n_direct += 1
+            name_to_idx[_normalize_station_name(raw)] = si
+
+    # 2. Fallback: ALL stop_names entries, bridging parent/child IDs
+    #    If a name isn't covered yet but some stop_id with that name
+    #    IS in our station list, add it.
+    for stop_id_all, raw_name in topo.stop_names.items():
+        norm = _normalize_station_name(raw_name)
+        if norm not in name_to_idx:
+            si = st2i.get(stop_id_all)
+            if si is not None:
+                name_to_idx[norm] = si
+
+    # 3. Reverse bridge: for names in stop_names NOT yet in name_to_idx,
+    #    check if any station in our list has the same normalized name
+    #    via a different stop_id.  Groups all stop_ids that share a name,
+    #    then checks each.
+    names_by_norm: dict[str, list[str]] = defaultdict(list)
+    for stop_id_all, raw_name in topo.stop_names.items():
+        names_by_norm[_normalize_station_name(raw_name)].append(stop_id_all)
+
+    for norm, sids in names_by_norm.items():
+        if norm in name_to_idx:
+            continue
+        for sid in sids:
+            si = st2i.get(sid)
+            if si is not None:
+                name_to_idx[norm] = si
+                break
+
+    # UID → station index (exact GTFS stop_id match)
+    uid_to_idx: dict[str, int] = {}
+    for si, stop_id in enumerate(stations):
+        uid_to_idx[stop_id] = si
+
+    print(
+        f"  name lookup: {n_direct} direct, "
+        f"{len(name_to_idx)} total unique names from {N} stations"
+    )
+
+    # Diagnostic: show what we're trying to match
+    if n_direct == 0:
+        sample_sids = stations[:5]
+        sample_in_names = [
+            (sid, topo.stop_names.get(sid, "<MISSING>")) for sid in sample_sids
+        ]
+        print(f"  WARNING: 0 direct name lookups succeeded")
+        print(f"  station ID samples: {sample_in_names}")
+        sample_name_keys = list(topo.stop_names.keys())[:5]
+        print(f"  stop_names key samples: {sample_name_keys}")
 
     def _match_station(sd: dict) -> int | None:
-        uid = sd.get("station_unique_id", "")
-        if uid in st2i:
-            return st2i[uid]
+        raw = sd.get("station", "")
+        if raw:
+            norm = _normalize_station_name(raw)
+            norm = _IC_STATION_ALIASES.get(norm, norm)
+            if norm in name_to_idx:
+                return name_to_idx[norm]
+
         tb = sd.get("station_name_tb", "")
         if tb:
-            sid = name_to_stop.get(_normalize_station_name(tb))
-            if sid is not None:
-                return st2i.get(sid)
+            norm = _normalize_station_name(tb)
+            norm = _IC_STATION_ALIASES.get(norm, norm)
+            if norm in name_to_idx:
+                return name_to_idx[norm]
+
+        uid = sd.get("station_unique_id", "")
+        if uid in uid_to_idx:
+            return uid_to_idx[uid]
+
         return None
 
     # ── Parse interchange entries ─────────────────────────────
     transfer_cost: dict[tuple[int, int, int], float] = {}  # (si, li_from, li_to) → s
     cross_cost: dict[tuple[int, int], float] = {}  # (si, sj) → s
     unmatched_slugs: set[str] = set()
+    unmatched_stations: list[str] = []
     n_matched = 0
-    n_unmatched = 0
 
     for sd in interchange_data:
         si = _match_station(sd)
         if si is None:
-            n_unmatched += 1
+            unmatched_stations.append(sd.get("station_name_tb", sd.get("station", "?")))
             continue
         n_matched += 1
 
@@ -421,13 +510,23 @@ def floyd_warshall_with_transfers(
                 continue
             cost_s = mins * 60.0 * discount
 
-            if ic.get("branch_interchange"):
-                slug = ic.get("line_slug", "")
-                if not slug:
+            is_branch = ic.get("branch_interchange", False)
+
+            if is_branch:
+                # Branch interchange: line field is human name
+                line_name = ic.get("line_slug") or ic.get("line", "")
+                if not line_name:
                     continue
+                slug = _slugify_line(line_name)
                 lis = _resolve_slug(slug)
                 if not lis:
-                    unmatched_slugs.add(slug)
+                    # Try the raw name lowered as a direct route_id
+                    direct = line_name.lower().strip()
+                    if direct in ln2i:
+                        lis = [ln2i[direct]]
+                if not lis:
+                    unmatched_slugs.add(line_name)
+                    continue
                 for a in range(len(lis)):
                     for b in range(a + 1, len(lis)):
                         key_ab = (si, lis[a], lis[b])
@@ -445,25 +544,41 @@ def floyd_warshall_with_transfers(
 
             elif "cross_station" in ic:
                 other = _normalize_station_name(ic["cross_station"])
-                other_sid = name_to_stop.get(other)
-                if other_sid is not None and other_sid in st2i:
-                    sj = st2i[other_sid]
+                sj = name_to_idx.get(other)
+                if sj is not None:
                     if (si, sj) not in cross_cost or cost_s < cross_cost[(si, sj)]:
                         cross_cost[(si, sj)] = cost_s
                     if (sj, si) not in cross_cost or cost_s < cross_cost[(sj, si)]:
                         cross_cost[(sj, si)] = cost_s
 
             else:
-                fs = ic.get("from_line_slug", "")
-                ts = ic.get("to_line_slug", "")
-                if not fs or not ts:
+                # Standard interchange: from_line / to_line are human names
+                from_name = ic.get("from_line_slug") or ic.get("from_line", "")
+                to_name = ic.get("to_line_slug") or ic.get("to_line", "")
+                if not from_name or not to_name:
                     continue
-                from_lis = _resolve_slug(fs)
-                to_lis = _resolve_slug(ts)
+
+                from_slug = _slugify_line(from_name)
+                to_slug = _slugify_line(to_name)
+
+                from_lis = _resolve_slug(from_slug)
+                to_lis = _resolve_slug(to_slug)
+
+                # Direct route_id fallback
                 if not from_lis:
-                    unmatched_slugs.add(fs)
+                    direct = from_name.lower().strip()
+                    if direct in ln2i:
+                        from_lis = [ln2i[direct]]
                 if not to_lis:
-                    unmatched_slugs.add(ts)
+                    direct = to_name.lower().strip()
+                    if direct in ln2i:
+                        to_lis = [ln2i[direct]]
+
+                if not from_lis:
+                    unmatched_slugs.add(from_name)
+                if not to_lis:
+                    unmatched_slugs.add(to_name)
+
                 for lf in from_lis:
                     for lt in to_lis:
                         if lf != lt:
@@ -479,7 +594,12 @@ def floyd_warshall_with_transfers(
             reverse[rev] = cost
     transfer_cost.update(reverse)
 
+    n_unmatched = len(unmatched_stations)
     print(f"  interchange: {n_matched} stations matched, " f"{n_unmatched} unmatched")
+    if n_unmatched > 0 and n_unmatched <= 20:
+        print(f"  unmatched: {unmatched_stations}")
+    elif n_unmatched > 20:
+        print(f"  unmatched samples: {unmatched_stations[:10]}")
     print(
         f"  {len(transfer_cost)} directed transfer edges, "
         f"{len(cross_cost)} cross-station pairs"
@@ -614,8 +734,8 @@ def floyd_warshall_with_transfers(
 
     projected.fill_diagonal_(0.0)
 
-    n_inf = (projected == float("inf")).sum().item() - N  # exclude diagonal
-    n_reachable = N * (N - 1) - n_inf
-    print(f"  {n_reachable} reachable OD pairs, {n_inf} unreachable")
+    off_diag = N * (N - 1)
+    n_inf = int((projected == float("inf")).sum().item())
+    print(f"  {off_diag - n_inf} reachable OD pairs, {n_inf} unreachable")
 
     return projected
