@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from .beam import beam_decode, beam_rollout_nexthop, bellman_rollout_nexthop
 from .config import TrainConfig
 from .dataset import PAD, GPURouteDataset, NextHopGPUDataset
-from .defaults import MODEL_TYPES
+from .defaults import MODEL_TYPES, repo_root, resolve_data
 from .evaluate import (
     RouteMetrics,
     compute_metrics,
@@ -28,6 +28,8 @@ from .topology import (
     build_line_station_mask,
     extract,
     floyd_warshall_times,
+    floyd_warshall_with_transfers,
+    load_interchange_data,
 )
 
 
@@ -335,7 +337,28 @@ def train(cfg: TrainConfig) -> None:
     optimal_times = None
     if is_nexthop:
         edge_time_matrix = build_edge_time_matrix(topo, stations).to(device)
-        optimal_times = floyd_warshall_times(topo, stations).to(device)
+        lines = nh_ds.lines
+
+        data_cfg = resolve_data()
+        ic_rel = data_cfg.get("interchange_path", "")
+        ic_path = repo_root() / ic_rel if ic_rel else None
+
+        if ic_path is not None and ic_path.is_file():
+            interchange_data = load_interchange_data(ic_path)
+            optimal_times = floyd_warshall_with_transfers(
+                topo,
+                stations,
+                lines,
+                interchange_data,
+                discount=cfg.transfer_discount,
+            ).to(device)
+            rprint(
+                f"  transfer-aware Floyd-Warshall "
+                f"(discount={cfg.transfer_discount})"
+            )
+        else:
+            optimal_times = floyd_warshall_times(topo, stations).to(device)
+            rprint("  transfer-free Floyd-Warshall (no interchange data)")
 
     if cfg.model_type == "change":
         ls_mask = build_line_station_mask(topo, stations, ds.lines).to(device)

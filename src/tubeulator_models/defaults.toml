@@ -3,6 +3,7 @@ profile = "dev"
 default_model = "change"
 eval_only = false
 value_primary = false
+transfer_discount = 0.65
 
 # ── Encoder ───────────────────────────────────────────────────
 d_model = 128
@@ -38,6 +39,7 @@ pyg_dir = "data/pyg"
 routes_path = "data/routes.json"
 checkpoint_dir = "checkpoints"
 target_crs = 27700
+interchange_path = "data/interchange_times.json"
 
 [filter]
 region = "Greater London"
