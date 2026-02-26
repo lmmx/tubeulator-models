@@ -5,6 +5,7 @@ Three graph neural network models of the London Underground, each predicting rou
 - **line** — sequence of (line, direction) pairs: "take the Jubilee westbound, then the Northern northbound"
 - **change** — adds interchange stations: where exactly to transfer between lines
 - **station** — full station-by-station path from origin to destination
+- **nexthop** 
 
 All three share a GATv2 encoder over the station topology graph and differ only in their decoder head.
 
@@ -41,6 +42,12 @@ Profiles control the training regime:
 |---------|--------|------------|----|-------|
 | `dev` | 20 | 512 | 5e-4 | Fast iteration |
 | `full` | 200 | 256 | 1e-4 | Production, `d_model=256`, deeper encoder |
+
+Note: to train the value primary use
+
+```bash
+just train nexthop full --value-primary --batch-size 1024 --epochs 200
+```
 
 ## Data pipeline
 

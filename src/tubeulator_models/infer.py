@@ -368,6 +368,36 @@ def rollout(
 
 
 @torch.no_grad()
+def rollout_via(
+    lm: LoadedModel,
+    origin: str,
+    destination: str,
+    via: list[str],
+    max_hops: int = 60,
+) -> tuple[list[int], bool]:
+    """
+    Rollout through waypoints: origin → via[0] → via[1] → ... → destination.
+
+    Returns (full path, overall success).
+    """
+    waypoints = [origin] + via + [destination]
+    full_path: list[int] = []
+    all_success = True
+
+    for i in range(len(waypoints) - 1):
+        segment, success = rollout(
+            lm, waypoints[i], waypoints[i + 1], max_hops=max_hops
+        )
+        if not success:
+            all_success = False
+        if full_path:
+            segment = segment[1:]  # drop duplicate junction station
+        full_path.extend(segment)
+
+    return full_path, all_success
+
+
+@torch.no_grad()
 def predict_time(
     lm: LoadedModel,
     origin: str,
@@ -454,9 +484,47 @@ def _line_style(line_id: str | None) -> str:
     return LINE_STYLES.get(line_id, "bold")
 
 
+def _compute_cumulative_times(
+    path: list[int],
+    segments: list[tuple[str | None, list[str]]],
+    stations: list[str],
+    topo: Topology,
+) -> tuple[list[float], list[bool]]:
+    """
+    Cumulative travel time in seconds at each station, plus estimated flags.
+
+    Returns (cum_times, is_estimated) where is_estimated[i] is True
+    if the edge arriving at station i used the 120s fallback.
+    """
+    cum = [0.0]
+    estimated = [False]  # origin is never estimated
+
+    for i, (line_id, _alts) in enumerate(segments):
+        from_sid = stations[path[i]]
+        to_sid = stations[path[i + 1]]
+
+        if line_id:
+            t = topo.travel_time(line_id, from_sid, to_sid)
+            # Check if this is a real observed time or the 120s fallback
+            real = (from_sid, to_sid) in topo.edge_time.get(line_id, {})
+        else:
+            t = 120.0
+            real = False
+
+        cum.append(cum[-1] + t)
+        estimated.append(not real)
+
+    return cum, estimated
+
+
 def _render_route(path: list[int], success: bool, lm: LoadedModel) -> None:
     has_lines = lm.topo is not None and len(path) >= 2
     segments = _assign_lines(path, lm.stations, lm.topo) if has_lines else []
+    cum_times, estimated = (
+        _compute_cumulative_times(path, segments, lm.stations, lm.topo)
+        if has_lines
+        else ([], [])
+    )
 
     table = Table(
         title="Route",
@@ -467,14 +535,13 @@ def _render_route(path: list[int], success: bool, lm: LoadedModel) -> None:
     table.add_column("#", style="dim", width=4, justify="right")
     table.add_column("Station")
     if has_lines:
-        table.add_column("Line", min_width=20)
+        table.add_column("Line", min_width=18)
+        table.add_column("Time", justify="right", min_width=8)
 
-    # Track transfers
     prev_line: str | None = None
 
     for i, idx in enumerate(path):
         name = _display_name(idx, lm.stations, lm.stop_names)
-        # Strip " Underground Station" suffix for cleaner output
         for suffix in (" Underground Station", " DLR Station", " Station"):
             if name.endswith(suffix):
                 name = name[: -len(suffix)]
@@ -484,27 +551,47 @@ def _render_route(path: list[int], success: bool, lm: LoadedModel) -> None:
             "bold green" if i == 0 else "bold cyan" if i == len(path) - 1 else ""
         )
 
-        if has_lines and i < len(segments):
-            line_id, _alts = segments[i]
-            is_transfer = prev_line is not None and line_id != prev_line
-            style = _line_style(line_id)
+        if has_lines:
+            # Time column
+            if cum_times:
+                mins = cum_times[i] / 60.0
+                marker = "*" if estimated[i] else " "
+                time_str = f"{marker}{mins:.1f}m"
+            else:
+                time_str = ""
 
-            line_display = Text()
-            if is_transfer:
-                line_display.append("↳ ", style="bold yellow")
-            line_display.append(line_id or "?", style=style)
+            if i < len(segments):
+                line_id, _alts = segments[i]
+                is_transfer = prev_line is not None and line_id != prev_line
+                style = _line_style(line_id)
 
-            table.add_row(str(i), Text(name, style=station_style), line_display)
-            prev_line = line_id
-        elif has_lines:
-            # Last station — no outgoing segment
-            table.add_row(str(i), Text(name, style=station_style), Text(""))
+                line_display = Text()
+                if is_transfer:
+                    line_display.append("↳ ", style="bold yellow")
+                line_display.append(line_id or "?", style=style)
+
+                table.add_row(
+                    str(i),
+                    Text(name, style=station_style),
+                    line_display,
+                    time_str,
+                )
+                prev_line = line_id
+            else:
+                table.add_row(
+                    str(i), Text(name, style=station_style), Text(""), time_str
+                )
         else:
             table.add_row(str(i), name, style=station_style)
 
     console.print(table)
+    if estimated and any(estimated):
+        n_est = sum(estimated)
+        console.print(
+            f"[dim]* {n_est} edge{'s' if n_est != 1 else ''} "
+            f"using 120s fallback (no GTFS timing data)[/dim]"
+        )
 
-    # Summary
     status = Text()
     if success:
         status.append("✓ ", style="bold green")
@@ -527,6 +614,10 @@ def _render_route(path: list[int], success: bool, lm: LoadedModel) -> None:
         if n_transfers:
             status.append(f" · {n_transfers} transfer{'s' if n_transfers != 1 else ''}")
 
+    if cum_times:
+        total_mins = cum_times[-1] / 60.0
+        status.append(f" · {total_mins:.1f} min")
+
     console.print(status)
 
 
@@ -545,7 +636,11 @@ def run_policy(args: argparse.Namespace) -> None:
     lm = load_model("policy", source=args.model, profile=args.profile)
     console.print(f"[dim]Loaded ({lm.config['n_params']:,} params)[/dim]\n")
 
-    path, success = rollout(lm, args.origin, args.destination)
+    if args.via:
+        path, success = rollout_via(lm, args.origin, args.destination, args.via)
+    else:
+        path, success = rollout(lm, args.origin, args.destination)
+
     _render_route(path, success, lm)
 
     if not success:
@@ -577,7 +672,11 @@ def run_both(args: argparse.Namespace) -> None:
     value_lm = load_model("value", source=args.value_model, profile=args.profile)
     console.print("[dim]Loaded.[/dim]\n")
 
-    path, success = rollout(policy_lm, args.origin, args.destination)
+    if args.via:
+        path, success = rollout_via(lm, args.origin, args.destination, args.via)
+    else:
+        path, success = rollout(lm, args.origin, args.destination)
+
     _render_route(path, success, policy_lm)
 
     if success:
@@ -592,6 +691,9 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("-o", "--origin", required=True, help="Origin station name")
     parser.add_argument(
         "-d", "--destination", required=True, help="Destination station name"
+    )
+    parser.add_argument(
+        "-v", "--via", action="append", default=[], help="Waypoint (repeatable)"
     )
     parser.add_argument(
         "--profile", default="dev", help="Config profile (default: dev)"

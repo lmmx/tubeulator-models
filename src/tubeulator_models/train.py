@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 
 import torch
 import torch.nn as nn
@@ -840,6 +841,26 @@ def train(cfg: TrainConfig) -> None:
                     star = "[bold green]★[/]"
                     ckpt = cfg.checkpoint_dir / "model_nexthop_best.pt"
                     torch.save(raw_model.state_dict(), ckpt)
+                    ckpt.with_suffix(".metrics.json").write_text(
+                        json.dumps(
+                            {
+                                "success_rate": success_rate,
+                                "dijkstra_ratio": rollout_metrics.avg_dijkstra_ratio,
+                                "step_acc": step_acc,
+                                "len_ratio": rollout_metrics.avg_length_ratio,
+                                "n_od_pairs": nh_ds.n_od,
+                                "n_steps": nh_ds.n_steps,
+                                "n_train_od": n_train_od,
+                                "n_val_od": n_val_od,
+                                "n_train_steps": n_train,
+                                "n_val_steps": n_val,
+                                "batch_size": cfg.batch_size,
+                                "train_time_s": time.monotonic() - t_start,
+                            },
+                            indent=2,
+                        )
+                        + "\n"
+                    )
 
                 progress.update(
                     epoch_task,
@@ -1315,6 +1336,9 @@ def _train_value_primary(
                 star = "[bold green]★[/]"
                 ckpt = cfg.checkpoint_dir / "model_nexthop_value_best.pt"
                 torch.save(raw_model.state_dict(), ckpt)
+                ckpt.with_suffix(".metrics.json").write_text(
+                    json.dumps({"mae": mae}, indent=2) + "\n"
+                )
             if run_bellman and dij_ratio < best_bellman_dij:
                 best_bellman_dij = dij_ratio
 

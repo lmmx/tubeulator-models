@@ -131,10 +131,19 @@ def extract(gtfs_path: Path) -> Topology:
         if len(ordered) < 2:
             continue
 
+        # Detect interleaved branches: any duplicate sequence numbers?
+        seqs = [seq for seq, _, _ in ordered]
+        has_branches = len(seqs) != len(set(seqs))
+
         station_seq = [stop_id for _, stop_id, _ in ordered]
         line_seqs[line].append(station_seq)
 
+        if has_branches:
+            continue  # skip for adjacency + timing, keep for line_seqs
+
         for (_, s1, t1), (_, s2, t2) in zip(ordered, ordered[1:]):
+            if s1 == s2:
+                continue  # self-loop from duplicate stop entries
             line_adj[line][s1].add(s2)
             line_adj[line][s2].add(s1)
             station_lines[s1].add(line)

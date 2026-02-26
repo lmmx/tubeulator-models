@@ -53,7 +53,7 @@ export variant profile="full":
 
 # Export and upload to Hugging Face
 upload variant profile="full":
-    uv run --group pyg tm-export {{variant}} --profile {{profile}} --upload --private
+    uv run --group pyg tm-export {{variant}} --profile {{profile}} --upload
 
 # Export both models
 export-all: (export "policy") (export "value")
@@ -64,16 +64,16 @@ upload-all: (upload "policy") (upload "value")
 # ── Inference ────────────────────────────────────────────────
 
 # Policy rollout
-route origin dest:
-    uv run --group pyg tm-infer policy -o "{{origin}}" -d "{{dest}}"
+route origin dest via="":
+    uv run --group pyg tm-infer policy -o "{{origin}}" -d "{{dest}}" {{ if via == "" { "" } else { "-v \"" + via + "\"" } }}
 
 # Travel time prediction
-time origin dest:
-    uv run --group pyg tm-infer value -o "{{origin}}" -d "{{dest}}"
+time origin dest via="":
+    uv run --group pyg tm-infer value -o "{{origin}}" -d "{{dest}}" {{ if via == "" { "" } else { "-v \"" + via + "\"" } }}
 
 # Both: route + time
-plan origin dest:
-    uv run --group pyg tm-infer route -o "{{origin}}" -d "{{dest}}"
+plan origin dest via="":
+    uv run --group pyg tm-infer route -o "{{origin}}" -d "{{dest}}" {{ if via == "" { "" } else { "-v \"" + via + "\"" } }}
 
 # ── Shortcuts ────────────────────────────────────────────────
 
