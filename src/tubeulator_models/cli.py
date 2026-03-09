@@ -31,6 +31,13 @@ def _pyg_path() -> Path:
     return base / "london_transit.pt"
 
 
+def sync_timetables() -> None:
+    """Download and extract PDF timetables for lines without API support."""
+    from .timetable_pdf import sync_all
+
+    sync_all()
+
+
 def build_gtfs() -> None:
     """Fetch timetables from TfL API and write a GTFS zip."""
     from .gtfs_builder import build_gtfs as _build

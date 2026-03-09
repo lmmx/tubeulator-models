@@ -6,6 +6,7 @@ default:
 
 # Fetch timetables from TfL API
 fetch:
+    uv run --group pull tm-sync-tts
     uv run --group pull tm-build-gtfs
 
 # Build GTFS → graph → PyG pipeline

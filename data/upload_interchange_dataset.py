@@ -1,7 +1,9 @@
 """Upload interchange times dataset to HuggingFace."""
 
 import json
-from huggingface_hub import HfApi, metadata_update
+
+from huggingface_hub import HfApi
+
 
 REPO_ID = "permutans/tube-interchange-times"
 

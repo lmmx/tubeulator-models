@@ -5,7 +5,7 @@ Three graph neural network models of the London Underground, each predicting rou
 - **line** — sequence of (line, direction) pairs: "take the Jubilee westbound, then the Northern northbound"
 - **change** — adds interchange stations: where exactly to transfer between lines
 - **station** — full station-by-station path from origin to destination
-- **nexthop** 
+- **nexthop**
 
 All three share a GATv2 encoder over the station topology graph and differ only in their decoder head.
 
