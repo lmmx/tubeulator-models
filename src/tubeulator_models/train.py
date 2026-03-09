@@ -29,7 +29,6 @@ from .topology import (
     extract,
     floyd_warshall_line_aware,
     floyd_warshall_times,
-    floyd_warshall_with_transfers,
     load_interchange_data,
 )
 
@@ -358,9 +357,7 @@ def train(cfg: TrainConfig) -> None:
             optimal_times = optimal_times.to(device)
             q_matrix = q_matrix.to(device)
             optimal_times_eval = optimal_times_eval.to(device)
-            rprint(
-                f"  line-aware Floyd-Warshall " f"(discount={cfg.transfer_discount})"
-            )
+            rprint(f"  line-aware Floyd-Warshall (discount={cfg.transfer_discount})")
         else:
             optimal_times_eval = floyd_warshall_times(topo, stations).to(device)
             optimal_times = optimal_times_eval
