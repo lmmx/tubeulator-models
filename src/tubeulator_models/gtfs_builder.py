@@ -53,6 +53,10 @@ PARQUET_NAME_ALIASES: dict[str, str] = {
     "burnham": "burnham (berks)",
     "langley": "langley (berks)",
     "custom house": "custom house",
+    "walthamstow queen's road": "walthamstow queens road",
+    "cambridge heath": "cambridge heath (london)",
+    "st james street": "st james street (london)",
+    "new cross": "new cross ell",
 }
 
 
@@ -112,15 +116,15 @@ def _load_from_parquet(
         if s.Id and s.Id not in stops:
             stops[s.Id] = s
 
-    # Stops missing from the line's stop_points API response
-    MISSING_STOPS = {"HUBCUS": "Custom House"}
-    for sid, name in MISSING_STOPS.items():
+    # Stops missing from TfL's stop_points API
+    for sid, spec in resolve_data().get("missing_stops", {}).items():
         if sid not in stops:
-            try:
-                sp = tube.fetch.stop_point.stop_by_id(id=sid)
-                stops[sid] = _make_stop(sp)
-            except Exception:
-                stops[sid] = Stop(Id=sid, Name=name, Lat=51.5095, Lon=0.0255)
+            stops[sid] = Stop(
+                Id=sid,
+                Name=spec["name"],
+                Lat=spec["lat"],
+                Lon=spec["lon"],
+            )
 
     df = pl.read_parquet(parquet_path)
 

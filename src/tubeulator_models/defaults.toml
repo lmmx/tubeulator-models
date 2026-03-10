@@ -64,6 +64,21 @@ filename = "lo-weaver-line-timetable-december-2025.pdf"
 [data.pdf_timetables.windrush]
 filename = "lo-windrush-line-timetable-december-2025.pdf"
 
+[data.missing_stops.HUBCUS]
+name = "Custom House"
+lat = 51.5095
+lon = 0.0255
+
+[data.missing_stops."910GBKRVS"]
+name = "Barking Riverside"
+lat = 51.5191
+lon = 0.1148
+
+[data.missing_stops."910GBATRSPK"]
+name = "Battersea Park"
+lat = 51.47696
+lon = -0.147533
+
 [filter]
 region = "Greater London"
 

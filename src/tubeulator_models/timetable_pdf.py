@@ -169,12 +169,17 @@ def _page_header_info(page) -> tuple[str, str]:
 
 
 def _strip_station_codes(name: str) -> tuple[str, list[str]]:
-    """Remove known operator/schedule codes from a station name."""
+    """Remove known operator/schedule codes from a station name.
+
+    Codes adjacent to '&' are kept (e.g. 'Plts A & B' stays intact).
+    """
     words = name.split()
     clean = []
     codes = []
-    for w in words:
-        if w in KNOWN_COLUMN_CODES:
+    for i, w in enumerate(words):
+        prev = words[i - 1] if i > 0 else ""
+        nxt = words[i + 1] if i < len(words) - 1 else ""
+        if w in KNOWN_COLUMN_CODES and prev != "&" and nxt != "&":
             codes.append(w)
         else:
             clean.append(w)
@@ -266,7 +271,11 @@ def _extract_page(page) -> dict | None:
 
     # Key heuristic: a real station row has at least one time in the grid.
     # Footer legends have station-name-like text but zero times.
-    data_rows = {r for r in candidate_rows if any(grid[r])}
+    data_rows = {
+        r
+        for r in candidate_rows
+        if any(grid[r]) and not _is_legend_text(station_names[r])
+    }
     legend_rows = candidate_rows - data_rows
     legend_rows = _absorb_code_legends(
         legend_rows,
