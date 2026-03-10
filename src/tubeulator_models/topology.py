@@ -439,7 +439,7 @@ def floyd_warshall_with_transfers(
     interchange_data: list[dict],
     discount: float = 0.65,
     default_transfer_s: float = 240.0,
-) -> "torch.Tensor":
+) -> torch.Tensor:
     """All-pairs shortest time (seconds) with line-aware transfer penalties.
 
     Builds a compact (station, line) expanded graph containing only valid
@@ -539,7 +539,7 @@ def floyd_warshall_with_transfers(
         sample_in_names = [
             (sid, topo.stop_names.get(sid, "<MISSING>")) for sid in sample_sids
         ]
-        print(f"  WARNING: 0 direct name lookups succeeded")
+        print("  WARNING: 0 direct name lookups succeeded")
         print(f"  station ID samples: {sample_in_names}")
         sample_name_keys = list(topo.stop_names.keys())[:5]
         print(f"  stop_names key samples: {sample_name_keys}")
@@ -670,7 +670,7 @@ def floyd_warshall_with_transfers(
     transfer_cost.update(reverse)
 
     n_unmatched = len(unmatched_stations)
-    print(f"  interchange: {n_matched} stations matched, " f"{n_unmatched} unmatched")
+    print(f"  interchange: {n_matched} stations matched, {n_unmatched} unmatched")
     if n_unmatched > 0 and n_unmatched <= 20:
         print(f"  unmatched: {unmatched_stations}")
     elif n_unmatched > 20:
@@ -823,7 +823,7 @@ def floyd_warshall_line_aware(
     interchange_data: list[dict],
     discount: float = 0.65,
     default_transfer_s: float = 240.0,
-) -> tuple["torch.Tensor", "torch.Tensor", "torch.Tensor"]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Line-aware shortest paths for Q-value computation.
 
     Returns:

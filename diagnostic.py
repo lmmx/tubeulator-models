@@ -1,21 +1,33 @@
-import json, re
+import json
+import re
 from pathlib import Path
+
 from tubeulator_models.topology import extract
 
+
 topo = extract(Path("data/tfl_station_data_gtfs.zip"))
+
 
 def _normalize(name):
     s = name.lower().strip()
     if "," in s:
         s = s.split(",", 1)[0].strip()
     s = re.sub(r"\s*\((?:including|inc\.?)\b[^)]*\)", "", s).strip()
-    for suffix in ("-underground", " london underground", " underground station",
-                   " underground", " rail station", " dlr station", " station"):
+    for suffix in (
+        "-underground",
+        " london underground",
+        " underground station",
+        " underground",
+        " rail station",
+        " dlr station",
+        " station",
+    ):
         if s.endswith(suffix):
             s = s[: -len(suffix)]
             break
     s = s.replace("'", "").replace("\u2019", "").replace(".", " ")
     return " ".join(s.split())
+
 
 _ALIASES = {
     "edgware road circle": "edgware road (circle line)",
@@ -30,8 +42,9 @@ ic_lookup = {}
 for item in data:
     norm = _normalize(item["station"])
     norm = _ALIASES.get(norm, norm)
-    n_ic = len([ic for ic in item.get("interchanges", [])
-                if ic.get("minutes") is not None])
+    n_ic = len(
+        [ic for ic in item.get("interchanges", []) if ic.get("minutes") is not None]
+    )
     if n_ic > 0:
         ic_lookup[norm] = n_ic
 
