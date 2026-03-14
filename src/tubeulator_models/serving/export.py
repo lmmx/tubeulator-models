@@ -164,16 +164,31 @@ Floyd–Warshall all-pairs shortest paths provide the Q-value supervision signal
   station closures or service disruptions without mask modification.
 
 ## Usage
-```python
-import json, torch
-from safetensors.torch import load_file
-from huggingface_hub import hf_hub_download
 
-repo = "{hub_id}"
-config = json.loads(open(hf_hub_download(repo, "config.json")).read())
-weights = load_file(hf_hub_download(repo, "model.safetensors"))
-metadata = json.loads(open(hf_hub_download(repo, "metadata.json")).read())
-# See the project repository for full inference code.
+```bash
+pip install tubeulator-models[inference]
+```
+
+```python
+from tubeulator_models import TubeRouter
+
+router = TubeRouter.from_pretrained("{hub_id}")
+route = router.route("West Ham", "Shoreditch")
+print(route)
+# West Ham
+#   → [district] Bromley-by-Bow (2.0m)
+#   ...
+# ✓ 8 hops · 2 lines · 1 transfer · 18.0 min
+
+# With waypoints
+route = router.route("Camden Town", "Canary Wharf", via=["King's Cross"])
+```
+
+For CLI usage:
+
+```bash
+pip install tubeulator-models[cli]
+tm-infer policy --model {hub_id} -o "West Ham" -d Shoreditch
 ```
 
 ## Links
@@ -385,20 +400,26 @@ def export(
         "stations": stations,
         "lines": lines,
         "adjacency": adj.nonzero(as_tuple=False).tolist(),
+        "stop_names": topo.stop_names,
     }
     (export_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
-    # ── Model card ────────────────────────────────────────────
-    card_vars = dict(
-        hub_id=hub_id,
-        hub_id_short=hub_id.split("/")[-1],
-        d_model=cfg.d_model,
-        n_heads=cfg.n_heads,
-        n_enc_layers=cfg.n_enc_layers,
-        n_stations=len(stations),
-        n_lines=len(lines),
-        n_edges=n_edges,
-        n_params=n_params,
+    # ── Save graph tensors for standalone inference ───────────
+    from ..graph.enriched import build_enriched_graph
+    from .infer import _read_stop_coords
+
+    node_coords = _read_stop_coords(cfg.gtfs_path)
+    graph = build_enriched_graph(topo, node_coords=node_coords)
+    save_file(
+        {
+            "x": graph.x.contiguous(),
+            "edge_index": graph.edge_index.contiguous(),
+            "edge_attr": graph.edge_attr.contiguous(),
+        },
+        export_dir / "graph.safetensors",
+    )
+    print(
+        f"  Saved graph.safetensors ({graph.x.shape[0]} nodes, {graph.edge_index.shape[1]} edges)"
     )
 
     # ── Model card ────────────────────────────────────────────
