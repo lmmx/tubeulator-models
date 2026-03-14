@@ -7,7 +7,12 @@ from .defaults import (
     resolve_filter,
     resolve_plot,
 )
-from .pipeline.gtfs import build_travel_graph, filter_to_region, load_gtfs, load_london_graph
+from .pipeline.gtfs import (
+    build_travel_graph,
+    filter_to_region,
+    load_gtfs,
+    load_london_graph,
+)
 
 
 __all__ = [

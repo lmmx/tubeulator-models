@@ -99,8 +99,8 @@ def gtfs2pyg() -> None:
 def build_routes() -> None:
     """Enumerate routes for all OD pairs and save training data."""
     from .config import TrainConfig
-    from .training.routes import build_dataset
     from .graph.topology import extract
+    from .training.routes import build_dataset
 
     cfg = TrainConfig.from_defaults()
     topo = extract(cfg.gtfs_path)

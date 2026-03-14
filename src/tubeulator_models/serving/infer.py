@@ -20,7 +20,6 @@ from safetensors.torch import load_file
 from ..config import TrainConfig
 from ..defaults import repo_root, resolve_data, resolve_hub
 from ..graph.enriched import build_enriched_graph
-from ..models.combined import RouteModel
 from ..graph.topology import (
     Topology,
     build_adj_mask,
@@ -28,6 +27,7 @@ from ..graph.topology import (
     extract,
     load_interchange_data,
 )
+from ..models.combined import RouteModel
 
 
 __all__ = ["load_model", "rollout", "predict_time"]
