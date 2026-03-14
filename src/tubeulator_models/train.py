@@ -9,23 +9,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .beam import beam_decode, beam_rollout_nexthop, bellman_rollout_nexthop
+from .beam import beam_rollout_nexthop, bellman_rollout_nexthop
 from .config import TrainConfig
-from .dataset import PAD, GPURouteDataset, NextHopGPUDataset
+from .dataset import PAD, NextHopGPUDataset
 from .defaults import MODEL_TYPES, repo_root, resolve_data
 from .evaluate import (
     RouteMetrics,
-    compute_metrics,
     compute_nexthop_rollout_metrics,
     compute_nexthop_step_metrics,
 )
 from .graph_enriched import build_enriched_graph
-from .metrics_log import MetricsLogger
 from .models.combined import RouteModel
 from .topology import (
     build_adj_mask,
     build_edge_time_matrix,
-    build_line_station_mask,
     extract,
     floyd_warshall_line_aware,
     floyd_warshall_times,
@@ -81,82 +78,6 @@ def _compute_min_route_loss(
     route_loss[~route_valid] = float("inf")
 
     return route_loss.min(dim=1).values.mean()
-
-
-def _compute_loss(
-    logits: dict,
-    labels: torch.Tensor,
-    model_type: str,
-    label_smoothing: float = 0.0,
-) -> torch.Tensor:
-    """Vectorised loss — one CE call per head, not one per step×head."""
-    ce = nn.CrossEntropyLoss(ignore_index=PAD, label_smoothing=label_smoothing)
-
-    if model_type in ("line", "change"):
-        keys = ["line", "dir"] if model_type == "line" else ["line", "dir", "station"]
-        s = len(keys)  # stride: 2 for line, 3 for change
-        max_legs = logits["line"].size(1)
-
-        # Pad labels to at least max_legs * stride columns
-        needed = max_legs * s
-        if labels.size(1) < needed:
-            pad = labels.new_full((labels.size(0), needed - labels.size(1)), PAD)
-            labels = torch.cat([labels, pad], dim=1)
-
-        loss = torch.tensor(0.0, device=labels.device)
-        for offset, key in enumerate(keys):
-            # Extract every s-th column starting at offset → (B, max_legs)
-            tgt = labels[:, offset::s][:, :max_legs].reshape(-1)
-            pred = logits[key].reshape(-1, logits[key].size(-1))
-            loss = loss + ce(pred, tgt)
-        return loss / len(keys)
-
-    elif model_type == "station":
-        logits_flat = logits["station"]
-        max_len = logits_flat.size(1)
-        if labels.size(1) < max_len:
-            pad = labels.new_full(
-                (labels.size(0), max_len - labels.size(1)),
-                PAD,
-            )
-            labels = torch.cat([labels, pad], dim=1)
-        elif labels.size(1) > max_len:
-            labels = labels[:, :max_len]
-        return ce(
-            logits_flat.reshape(-1, logits_flat.size(-1)),
-            labels.reshape(-1),
-        )
-
-    raise ValueError(model_type)
-
-
-def _greedy_as_beam(
-    logits: dict,
-    model_type: str,
-    device: torch.device,
-) -> list[list[tuple[torch.Tensor, float]]]:
-    """Wrap greedy argmax predictions as single-beam results — vectorized."""
-    if model_type in ("line", "change"):
-        # (B, max_legs)
-        line_preds = logits["line"].argmax(-1)
-        dir_preds = logits["dir"].argmax(-1)
-        B, max_legs = line_preds.shape
-
-        if model_type == "change":
-            st_preds = logits["station"].argmax(-1)  # (B, max_legs)
-            # Interleave: (B, max_legs, 3) → (B, max_legs*3)
-            stacked = torch.stack([line_preds, dir_preds, st_preds], dim=-1)
-        else:
-            stacked = torch.stack([line_preds, dir_preds], dim=-1)
-
-        flat = stacked.reshape(B, -1)  # (B, max_legs*stride)
-        return [[(flat[b], 0.0)] for b in range(B)]
-
-    elif model_type == "station":
-        preds = logits["station"].argmax(-1)  # (B, max_len)
-        return [[(preds[b], 0.0)] for b in range(preds.size(0))]
-
-    raise ValueError(model_type)
 
 
 def _n_legs(labels: torch.Tensor, model_type: str) -> torch.Tensor:
@@ -289,19 +210,7 @@ def train(cfg: TrainConfig) -> None:
             f"\n  {n_train:,} train / {n_val:,} val steps"
         )
     else:
-        ds = GPURouteDataset(cfg.routes_path, model=cfg.model_type, device=device)
-        n_stations = ds.n_stations
-        n_lines = ds.n_lines
-        stations = ds.stations
-
-        n_total = ds.n
-        n_val = max(1, int(cfg.val_split * n_total))
-        n_train = n_total - n_val
-        perm = torch.randperm(n_total, device=device, generator=split_gen)
-        train_idx = perm[:n_train]
-        val_idx = perm[n_train:]
-
-        rprint(f"  {n_train:,} train, {n_val:,} val examples (GPU-resident)")
+        raise ValueError("Not implemented for non-nexthop")
 
     effective_bs = min(cfg.batch_size, n_train)
     n_train_batches = (n_train + effective_bs - 1) // effective_bs
@@ -325,7 +234,7 @@ def train(cfg: TrainConfig) -> None:
         f"  Model [bold cyan]{cfg.model_type}[/]: {n_params:,} params | {cfg.hp_tag}"
     )
 
-    if cfg.model_type in ("station", "nexthop"):
+    if is_nexthop:
         adj = build_adj_mask(topo, stations).to(device)
         model.decoder.set_adj_mask(adj)
         n_avg = adj.float().sum(1).mean().item()
@@ -363,12 +272,6 @@ def train(cfg: TrainConfig) -> None:
             optimal_times = optimal_times_eval
             rprint("  transfer-free Floyd-Warshall (no interchange data)")
 
-    if cfg.model_type == "change":
-        ls_mask = build_line_station_mask(topo, stations, ds.lines).to(device)
-        model.decoder.set_line_station_mask(ls_mask)
-        avg_st = ls_mask.float().sum(1).mean().item()
-        rprint(f"  line→station mask: {avg_st:.1f} avg stations per line")
-
     raw_model = model
     model = _try_compile(model)
 
@@ -402,7 +305,6 @@ def train(cfg: TrainConfig) -> None:
     best_val = 0.0
     best_metrics = None
     cfg.checkpoint_dir.mkdir(exist_ok=True)
-    logger = MetricsLogger(cfg.model_type, cfg.hp_tag, cfg.checkpoint_dir.parent)
 
     # ── Value-primary: separate training path ─────────────────
     if is_nexthop and cfg.value_primary:
@@ -622,32 +524,7 @@ def train(cfg: TrainConfig) -> None:
             star="",
         )
     else:
-        progress_columns = [
-            BarColumn(),
-            "[progress.percentage]{task.percentage:>3.0f}%",
-            TimeRemainingColumn(),
-            TextColumn("·"),
-            TextColumn(
-                "loss [cyan]{task.fields[train_loss]:.4f}[/]"
-                "/[magenta]{task.fields[val_loss]:.4f}"
-            ),
-            TextColumn("top1 [bold green]{task.fields[exact_match]:.1%}"),
-            TextColumn("beam {task.fields[beam_display]}"),
-            TextColumn("valid {task.fields[valid]:.0%}"),
-            TextColumn("lr [dim]{task.fields[lr]:.1e}"),
-            TextColumn("{task.fields[star]}"),
-        ]
-        task_fields = dict(
-            train_loss=0.0,
-            val_loss=0.0,
-            exact_match=0.0,
-            beam_display="[dim]—",
-            valid=0.0,
-            lr=cfg.lr,
-            star="",
-        )
-
-    N = n_stations
+        raise ValueError("Not implemented for non-nexthop")
 
     with Progress(*progress_columns, refresh_per_second=4) as progress:
         epoch_task = progress.add_task("Training", total=cfg.epochs, **task_fields)
@@ -727,32 +604,7 @@ def train(cfg: TrainConfig) -> None:
                         loss = policy_loss + VALUE_LOSS_WEIGHT * value_loss
                     n_items = currents.size(0)
                 else:
-                    raw_indices, origins, dests, labels = ds.get_batch(batch_idx)
-                    with torch.amp.autocast("cuda", enabled=use_amp):
-                        logits = model(
-                            graph.x,
-                            graph.edge_index,
-                            graph.edge_attr,
-                            origins,
-                            dests,
-                            labels=labels,
-                            sampling_p=cfg.scheduled_sampling,
-                        )
-                        if cfg.model_type == "station":
-                            all_valid = ds.get_all_labels_batch(raw_indices)
-                            loss = _compute_min_route_loss(
-                                logits,
-                                all_valid,
-                                label_smoothing=cfg.label_smoothing,
-                            )
-                        else:
-                            loss = _compute_loss(
-                                logits,
-                                labels,
-                                cfg.model_type,
-                                label_smoothing=cfg.label_smoothing,
-                            )
-                    n_items = origins.size(0)
+                    raise ValueError(model_type)
 
                 optimizer.zero_grad(set_to_none=True)
                 scaler.scale(loss).backward()
@@ -918,157 +770,7 @@ def train(cfg: TrainConfig) -> None:
                 )
 
             else:
-                epoch_val_loss = torch.zeros(1, device=device)
-                batch_metrics: list[RouteMetrics] = []
-
-                run_beam = (
-                    cfg.beam_eval_interval > 0 and epoch % cfg.beam_eval_interval == 0
-                ) or epoch == cfg.epochs
-
-                if run_beam and cfg.beam_eval_sample < 1.0:
-                    n_beam_val = max(1, int(n_val * cfg.beam_eval_sample))
-                    beam_perm = torch.randperm(n_val, device=device)[:n_beam_val]
-                    beam_val_idx = val_idx[beam_perm]
-                else:
-                    beam_val_idx = val_idx
-
-                n_beam_eval = beam_val_idx.size(0) if run_beam else n_val
-                n_val_batches = (n_beam_eval + cfg.batch_size - 1) // cfg.batch_size
-
-                if run_beam:
-                    beam_progress = Progress(
-                        BarColumn(),
-                        "[progress.percentage]{task.percentage:>3.0f}%",
-                        TimeRemainingColumn(),
-                        TextColumn("·"),
-                        TextColumn("beam eval"),
-                        transient=True,
-                    )
-                    beam_progress.start()
-                    beam_task = beam_progress.add_task("Beam", total=n_val_batches)
-                else:
-                    beam_progress = None
-
-                with torch.no_grad():
-                    for batch_start in range(0, n_beam_eval, cfg.batch_size):
-                        eval_source = beam_val_idx if run_beam else val_idx
-                        batch_idx = eval_source[
-                            batch_start : batch_start + cfg.batch_size
-                        ]
-                        raw_indices, origins, dests, labels = ds.get_batch(batch_idx)
-
-                        with torch.amp.autocast("cuda", enabled=use_amp):
-                            logits = model(
-                                graph.x,
-                                graph.edge_index,
-                                graph.edge_attr,
-                                origins,
-                                dests,
-                                labels=labels,
-                            )
-                            vl = _compute_loss(
-                                logits,
-                                labels,
-                                cfg.model_type,
-                                label_smoothing=0.0,
-                            )
-                        epoch_val_loss += vl.detach() * origins.size(0)
-
-                        all_valid = ds.get_all_labels_batch(raw_indices)
-
-                        if run_beam:
-                            beam_results = beam_decode(
-                                raw_model,
-                                graph.x,
-                                graph.edge_index,
-                                graph.edge_attr,
-                                origins,
-                                dests,
-                                beam_width=cfg.beam_width,
-                            )
-                            beam_progress.update(beam_task, advance=1)
-                        else:
-                            beam_results = _greedy_as_beam(
-                                logits,
-                                cfg.model_type,
-                                device,
-                            )
-
-                        strat_keys = _n_legs(labels, cfg.model_type)
-
-                        batch_metrics.append(
-                            compute_metrics(
-                                beam_results,
-                                cfg.model_type,
-                                n_lines=n_lines,
-                                n_stations=n_stations,
-                                all_valid_labels=all_valid,
-                                strat_keys=strat_keys,
-                            )
-                        )
-
-                if beam_progress is not None:
-                    beam_progress.stop()
-
-                avg_val = epoch_val_loss.item() / n_val
-                epoch_metrics = _aggregate_metrics(batch_metrics)
-
-                star = ""
-                if epoch_metrics.exact_match > best_val:
-                    best_val = epoch_metrics.exact_match
-                    best_metrics = epoch_metrics
-                    star = "[bold green]★[/]"
-                    ckpt = cfg.checkpoint_dir / f"model_{cfg.model_type}_best.pt"
-                    torch.save(raw_model.state_dict(), ckpt)
-
-                beam_str = (
-                    f"[bold yellow]{epoch_metrics.any_in_beam:.1%}"
-                    if run_beam
-                    else "[dim]—"
-                )
-
-                progress.update(
-                    epoch_task,
-                    advance=1,
-                    train_loss=avg_train,
-                    val_loss=avg_val,
-                    exact_match=epoch_metrics.exact_match,
-                    beam_display=beam_str,
-                    valid=epoch_metrics.topologically_valid,
-                    lr=lr_now,
-                    star=star,
-                )
-                logger.log(epoch, avg_train, avg_val, epoch_metrics, run_beam)
-
-                if run_beam and epoch_metrics.stratified:
-                    if cfg.model_type == "station":
-                        bucket_ranges = [
-                            (2, 5),
-                            (6, 10),
-                            (11, 20),
-                            (21, 30),
-                            (31, 50),
-                        ]
-                        bucket_parts = []
-                        for lo, hi in bucket_ranges:
-                            total_n = 0
-                            total_correct = 0
-                            for k, (acc, n) in epoch_metrics.stratified.items():
-                                if lo <= k <= hi:
-                                    total_n += n
-                                    total_correct += acc * n
-                            if total_n > 0:
-                                bucket_parts.append(
-                                    f"{lo}-{hi}st:{total_correct / total_n:.0%}"
-                                    f"({total_n})"
-                                )
-                        rprint(f"  stratified: {' | '.join(bucket_parts)}")
-                    else:
-                        parts = [
-                            f"{k}legs:{acc:.0%}({n})"
-                            for k, (acc, n) in epoch_metrics.stratified.items()
-                        ]
-                        rprint(f"  stratified: {' | '.join(parts)}")
+                raise ValueError("Not implemented for non-nexthop")
 
     elapsed = time.monotonic() - t_start
     m, s = divmod(int(elapsed), 60)
@@ -1079,8 +781,6 @@ def train(cfg: TrainConfig) -> None:
         rprint(
             f"\n[bold green]Done.[/] Best rollout success: {best_val:.1%} ({time_str})"
         )
-    else:
-        rprint(f"\n[bold green]Done.[/] Best exact match: {best_val:.4f} ({time_str})")
     if best_metrics:
         rprint(f"Best metrics: {best_metrics}")
     rprint(f"Checkpoint → {cfg.checkpoint_dir / f'model_{cfg.model_type}_best.pt'}")

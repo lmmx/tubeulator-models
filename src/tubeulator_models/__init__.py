@@ -8,11 +8,6 @@ from .defaults import (
     resolve_plot,
 )
 from .gtfs import build_travel_graph, filter_to_region, load_gtfs, load_london_graph
-from .hierarchical import (
-    evaluate_hierarchical,
-    expand_legs_to_stations,
-    hierarchical_decode,
-)
 
 
 __all__ = [
