@@ -1,39 +1,69 @@
 # Tubeulator Models
 
-Three graph neural network models of the London Underground, each predicting routes at a different granularity:
+Graph neural network models of the London Underground trained on TfL timetable data.
 
-- **line** — sequence of (line, direction) pairs: "take the Jubilee westbound, then the Northern northbound"
-- **change** — adds interchange stations: where exactly to transfer between lines
-- **station** — full station-by-station path from origin to destination
-- **nexthop**
+Two models share a GATv2 encoder over the station topology graph and differ in their decoder head:
 
-All three share a GATv2 encoder over the station topology graph and differ only in their decoder head.
+- **nexthop policy** — given a current station and destination, predicts the optimal next station to visit. Greedy rollout achieves 1.09× Dijkstra ratio with 100% success across all 239,610 origin–destination pairs.
+- **nexthop value** — predicts shortest travel time in minutes between any pair of stations. MAE of ~0.5 min vs. Floyd–Warshall ground truth.
 
-## Quickstart
+## Installation
 ```bash
-just all        # fetch data + build graph + enumerate routes + train all models
+pip install tubeulator-models[inference]
+```
+
+For the CLI:
+```bash
+pip install tubeulator-models[cli]
+```
+
+## Usage
+
+### Python API
+```python
+from tubeulator_models import TubeRouter
+
+router = TubeRouter.from_pretrained("permutans/tube-nexthop-policy")
+route = router.route("West Ham", "Shoreditch")
+print(route)
+# West Ham
+#   → [district] Bromley-by-Bow (2.0m)
+#   ...
+# ✓ 8 hops · 2 lines · 1 transfer · 16.0 min
+```
+
+Route through waypoints:
+```python
+route = router.route("Camden Town", "Canary Wharf", via=["King's Cross"])
+```
+
+The `Route` object has `.steps`, `.total_minutes`, `.lines_used`, `.n_transfers`, `.success`, and a `.to_dict()` method.
+
+### CLI
+```bash
+tm-infer policy --model permutans/tube-nexthop-policy -o "West Ham" -d Shoreditch
+tm-infer policy --model permutans/tube-nexthop-policy -o "Camden Town" -d "Canary Wharf" -v "King's Cross"
+tm-infer value  --model permutans/tube-nexthop-value  -o "West Ham" -d Shoreditch
+```
+
+## Training from source
+
+Clone the repo and use the justfile recipes:
+```bash
+just all        # fetch data + build graph + train
 ```
 
 Or step by step:
 ```bash
 just fetch      # pull timetables from TfL API → GTFS zip
 just graph      # GTFS → GeoParquet → PyG graph objects
-just routes     # enumerate routes for all origin-destination pairs
-just train-all  # train line, change, and station models sequentially
-```
-
-## Training
-```bash
-just train change           # single model, default profile (dev)
-just train station full     # single model, full profile
-just train-all              # all three, default profile
-just train-full             # all three, full profile
-just dev                    # rebuild routes + train change model (fast iteration)
+just train nexthop full
+just train nexthop full --value-primary --batch-size 1024 --epochs 200
 ```
 
 All hyperparameters live in `defaults.toml`. CLI flags override the TOML but never replace it:
 ```bash
-tm-train --model line --profile full --lr 5e-5
+tm-train --model nexthop --profile full --lr 5e-5
 ```
 
 Profiles control the training regime:
@@ -41,27 +71,19 @@ Profiles control the training regime:
 | Profile | Epochs | Batch size | LR | Notes |
 |---------|--------|------------|----|-------|
 | `dev` | 20 | 512 | 5e-4 | Fast iteration |
-| `full` | 200 | 256 | 1e-4 | Production, `d_model=256`, deeper encoder |
-
-Note: to train the value primary use
-
-```bash
-just train nexthop full --value-primary --batch-size 1024 --epochs 200
-```
+| `full` | 200 | 256 | 1e-4 | Production, `d_model=512`, 16-layer encoder |
 
 ## Data pipeline
-
-Each step has a CLI entry point and a corresponding justfile recipe:
 
 | Step | CLI | Recipe | Output |
 |------|-----|--------|--------|
 | Fetch timetables | `tm-build-gtfs` | `just fetch` | `data/tfl_station_data_gtfs.zip` |
 | Build graph | `tm-gtfs2pyg` | `just graph` | `data/graph/`, `data/pyg/` |
-| Enumerate routes | `tm-build-routes` | `just routes` | `data/routes.json` |
 | Plot network | `tm-plot` | `just plot` | `data/graph/network.png` |
 | Train | `tm-train` | `just train` | `checkpoints/` |
+| Export | `tm-export` | `just upload` | `models/` → HuggingFace |
 
-Staged graph conversion is also available if you only need to re-run part of the pipeline:
+Staged graph conversion is also available:
 ```bash
 uv run --group prep    tm-gtfs2graph   # GTFS → GeoParquet
 uv run --group pyg     tm-graph2pyg    # GeoParquet → PyG .pt
@@ -79,3 +101,9 @@ uv run --group pyg     tm-graph2pyg    # GeoParquet → PyG .pt
 just lint       # ruff check
 just clean      # remove data/ and checkpoints/
 ```
+
+## Links
+
+- [Policy model on HuggingFace](https://huggingface.co/permutans/tube-nexthop-policy)
+- [Value model on HuggingFace](https://huggingface.co/permutans/tube-nexthop-value)
+- [tubeulator-models on PyPI](https://pypi.org/project/tubeulator-models/)

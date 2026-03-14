@@ -89,4 +89,5 @@ clean:
 
 # Publish Python package
 publish:
+    uv build
     uv publish -u __token__ -p $(keyring get PYPIRC_TOKEN "")
