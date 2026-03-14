@@ -23,16 +23,16 @@ model-index:
         metrics:
           - type: accuracy
             name: Rollout Success Rate
-            value: 0.9986431478968792
+            value: 0.9995826377295493
           - type: custom
             name: Dijkstra Ratio
-            value: 1.044379105846017
+            value: 1.0875682957637163
           - type: custom
             name: Step Accuracy
-            value: 0.8701745788667687
+            value: 0.7905286123339477
           - type: custom
             name: Length Ratio
-            value: 1.0280089166686708
+            value: inf
 ---
 
 # Tube Next-Hop Policy
@@ -42,9 +42,9 @@ decisions on the London Underground graph. Given a current station and a
 destination, the model outputs a probability distribution over adjacent
 stations.
 
-Greedy rollout achieves **1.04× Dijkstra ratio** (optimal
-shortest travel time) with **99.9% success rate** across all
-73,712 origin–destination pairs.
+Greedy rollout achieves **1.09× Dijkstra ratio** (optimal
+shortest travel time) with **100.0% success rate** across all
+239,610 origin–destination pairs.
 
 ## Intended Use
 
@@ -63,25 +63,25 @@ graph-attention-based policy learning.
 |---|---|
 | Encoder | 16-layer GATv2, d=512, 8 heads |
 | Decoder | 3-layer MLP with adjacency masking |
-| Graph | 272 stations, 11 lines, 900 directed edges |
-| Parameters | 9,990,929 |
+| Graph | 490 stations, 19 lines, 1752 directed edges |
+| Parameters | 10,168,299 |
 | Training signal | KL divergence vs. Q-soft targets from Floyd–Warshall |
 | Label smoothing | 0.1 |
 | Scheduled sampling | 0.5 |
 
 ## Evaluation Results
 
-Evaluated on a held-out set of 7,371 OD pairs (163,250 next-hop
+Evaluated on a held-out set of 23,961 OD pairs (489,981 next-hop
 steps), with greedy rollout to completion.
 
 | Metric | Value |
 |---|---|
-| Rollout success rate | 99.9% |
-| Dijkstra ratio (travel time vs. optimal) | 1.04 |
-| Step accuracy (single-step top-1) | 87.0% |
-| Length ratio (hops vs. optimal hops) | 1.03 |
+| Rollout success rate | 100.0% |
+| Dijkstra ratio (travel time vs. optimal) | 1.09 |
+| Step accuracy (single-step top-1) | 79.1% |
+| Length ratio (hops vs. optimal hops) | inf |
 
-> **Note on step accuracy:** The 87.0% top-1 step accuracy reflects
+> **Note on step accuracy:** The 79.1% top-1 step accuracy reflects
 > that many nodes have multiple equally-optimal next hops. The model distributes
 > probability across these alternatives, which is correct behavior — the
 > rollout metrics confirm optimal routing.
@@ -92,15 +92,15 @@ The graph topology and edge travel times are extracted from Transport for
 London's [GTFS timetable feed](https://tfl.gov.uk/info-for/open-data-users/).
 Floyd–Warshall all-pairs shortest paths provide the Q-value supervision signal.
 
-- 73,712 OD pairs → 1,638,297 next-hop training steps
-- 90/10 OD-pair split (66,341 train / 7,371 val)
+- 239,610 OD pairs → 4,891,856 next-hop training steps
+- 90/10 OD-pair split (215,649 train / 23,961 val)
 - Batch size: 4,096 steps
 
 ## Training Details
 
 - Optimizer: AdamW, lr=3e-04
 - Compiled with `torch.compile(mode='default')`
-- Training time: ~17 minutes
+- Training time: ~58 minutes
 - Hardware: single GPU
 
 ## Limitations

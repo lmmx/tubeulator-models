@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
+tm-sync-tts     = "tubeulator_models.cli:sync_timetables"
 tm-build-gtfs   = "tubeulator_models.cli:build_gtfs"
 tm-build-routes = "tubeulator_models.cli:build_routes"
 tm-plot         = "tubeulator_models.cli:plot_graph"
@@ -27,6 +28,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 pull = [
+    "pdfplumber>=0.11.9",
     "polars==1.29",
     "tubeulator>=0.1.3",
 ]

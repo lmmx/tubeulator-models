@@ -40,6 +40,45 @@ routes_path = "data/routes.json"
 checkpoint_dir = "checkpoints"
 target_crs = 27700
 interchange_path = "data/interchange_times.json"
+modes = ["tube", "elizabeth-line", "dlr", "overground", "tram"]
+timetable_dir = "data/timetables"
+
+[data.pdf_timetables.elizabeth]
+filename = "elizabeth-line-december-2025.pdf"
+
+[data.pdf_timetables.liberty]
+filename = "lo-liberty-line-timetable-december-2025.pdf"
+
+[data.pdf_timetables.lioness]
+filename = "lo-lioness-line-timetable-december-2025.pdf"
+
+[data.pdf_timetables.mildmay]
+filename = "lo-mildmay-line-timetable-december-2025.pdf"
+
+[data.pdf_timetables.suffragette]
+filename = "lo-suffragette-line-timetable-december-2025.pdf"
+
+[data.pdf_timetables.weaver]
+filename = "lo-weaver-line-timetable-december-2025.pdf"
+
+[data.pdf_timetables.windrush]
+filename = "lo-windrush-line-timetable-december-2025.pdf"
+
+[data.missing_stops.HUBCUS]
+name = "Custom House"
+lat = 51.5095
+lon = 0.0255
+hub = "HUBCUS"
+
+[data.missing_stops."910GBKRVS"]
+name = "Barking Riverside"
+lat = 51.5191
+lon = 0.1148
+
+[data.missing_stops."910GBATRSPK"]
+name = "Battersea Park"
+lat = 51.47696
+lon = -0.147533
 
 [filter]
 region = "Greater London"

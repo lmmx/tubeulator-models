@@ -6,8 +6,8 @@
   "n_enc_layers": 16,
   "max_seq": 60,
   "dropout": 0.1,
-  "n_stations": 272,
-  "n_lines": 11,
+  "n_stations": 490,
+  "n_lines": 19,
   "value_primary": true,
-  "n_params": 11174673
+  "n_params": 11352043
 }

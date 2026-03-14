@@ -337,6 +337,23 @@ def _display_name(idx: int, stations: list[str], stop_names: dict[str, str]) -> 
     return stop_names.get(sid, sid)
 
 
+def _destination_set(dest_idx: int, stations: list[str], topo: Topology) -> set[int]:
+    """All station indices that count as 'arrived' for a destination."""
+    targets = {dest_idx}
+    if topo is None:
+        return targets
+    dest_sid = stations[dest_idx]
+    # Find which hub this station belongs to
+    for hub, members in topo.hub_members.items():
+        if dest_sid in members or dest_sid == hub:
+            for member in members:
+                if member in stations:
+                    targets.add(stations.index(member))
+            if hub in stations:
+                targets.add(stations.index(hub))
+    return targets
+
+
 # ── Inference ─────────────────────────────────────────────────
 
 
@@ -359,8 +376,10 @@ def rollout(
     current = orig_idx
     visited = {orig_idx}
 
+    dest_set = _destination_set(dest_idx, lm.stations, lm.topo)
+
     for _ in range(max_hops):
-        if current == dest_idx:
+        if current in dest_set:
             break
 
         h_current = lm.H[current].unsqueeze(0)
@@ -387,7 +406,7 @@ def rollout(
         visited.add(next_hop)
         current = next_hop
 
-    return path, current == dest_idx
+    return path, current in dest_set
 
 
 @torch.no_grad()

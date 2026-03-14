@@ -40,6 +40,7 @@ class Topology:
     # (from_stop, to_stop) -> frozenset of lines serving this directed edge
     edge_lines: dict[tuple[str, str], frozenset[str]]
     route_names: dict[str, str] = field(default_factory=dict)
+    hub_members: dict[str, list[str]] = field(default_factory=dict)
 
     def neighbors(self, station: str, line: str) -> set[str]:
         return self.line_adj.get(line, {}).get(station, set())
@@ -96,9 +97,13 @@ def extract(gtfs_path: Path) -> Topology:
     with zipfile.ZipFile(gtfs_path) as zf:
         stop_names = {}
         route_names: dict[str, str] = {}
+        hub_members: dict[str, list[str]] = {}
         with zf.open("stops.txt") as f:
             for row in csv.DictReader(io.TextIOWrapper(f)):
                 stop_names[row["stop_id"]] = row["stop_name"]
+                parent = row.get("parent_station", "")
+                if parent:
+                    hub_members.setdefault(parent, []).append(row["stop_id"])
 
             with zf.open("routes.txt") as f:
                 for row in csv.DictReader(io.TextIOWrapper(f)):
@@ -170,6 +175,32 @@ def extract(gtfs_path: Path) -> Topology:
     line_order = {ln: max(seqs, key=len) for ln, seqs in line_seqs.items()}
     interchanges = {s for s, ls in station_lines.items() if len(ls) >= 2}
 
+    # Cross-link lines across colocated stops (shared parent_station)
+    for hub, members in hub_members.items():
+        all_lines: set[str] = set()
+        for sid in members:
+            all_lines |= station_lines.get(sid, set())
+        if len(all_lines) >= 2:
+            for sid in members:
+                if sid in station_lines:
+                    station_lines[sid] |= all_lines
+                    interchanges.add(sid)
+
+    # Add transfer edges between colocated stops (same physical station)
+    for hub, members in hub_members.items():
+        active = [s for s in members if s in station_lines]
+        if len(active) < 2:
+            continue
+        for s1 in active:
+            for s2 in active:
+                if s1 == s2:
+                    continue
+                for line in station_lines.get(s1, set()) & station_lines.get(s2, set()):
+                    line_adj[line].setdefault(s1, set()).add(s2)
+                    line_adj[line].setdefault(s2, set()).add(s1)
+                    edge_time.setdefault(line, {}).setdefault((s1, s2), 0.0)
+                    edge_time.setdefault(line, {}).setdefault((s2, s1), 0.0)
+
     # Build edge → lines equivalence map
     edge_lines_raw: dict[tuple[str, str], set[str]] = defaultdict(set)
     for line, adj in line_adj.items():
@@ -193,6 +224,7 @@ def extract(gtfs_path: Path) -> Topology:
         edge_time=edge_time,
         edge_lines=edge_lines,
         route_names=route_names,
+        hub_members=hub_members,
     )
 
 
@@ -339,6 +371,34 @@ def build_transfer_lookup(
             for l2 in serving:
                 if l1 != l2 and (stop_id, l1, l2) not in lookup:
                     lookup[(stop_id, l1, l2)] = default_cost
+
+    st2i = {s: i for i, s in enumerate(stations)}
+    ln2i = {ln: i for i, ln in enumerate(topo.all_lines)}
+    # Colocated stops (same parent_station) get zero transfer cost
+    for hub, members in topo.hub_members.items():
+        active = [s for s in members if s in set(stations)]
+        if len(active) < 2:
+            continue
+        for s1 in active:
+            si = st2i.get(s1)
+            if si is None:
+                continue
+            for s2 in active:
+                if s1 == s2:
+                    continue
+                sj = st2i.get(s2)
+                if sj is None:
+                    continue
+                for l1 in topo.station_lines.get(s1, set()):
+                    li1 = ln2i.get(l1)
+                    if li1 is None:
+                        continue
+                    for l2 in topo.station_lines.get(s2, set()):
+                        li2 = ln2i.get(l2)
+                        if li2 is None:
+                            continue
+                        lookup[(si, li1, li2)] = 0.0
+                        lookup[(sj, li2, li1)] = 0.0
 
     return lookup
 
