@@ -86,3 +86,7 @@ lint:
 # Clean generated data
 clean:
     rm -rf data/ checkpoints/
+
+# Publish Python package
+publish:
+    uv publish -u __token__ -p $(keyring get PYPIRC_TOKEN "")
