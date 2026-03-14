@@ -877,7 +877,7 @@ def floyd_warshall_line_aware(
     import torch
 
     N = len(stations)
-    L = len(lines)
+    # L = len(lines)
     st2i = {s: i for i, s in enumerate(stations)}
     ln2i = {ln: i for i, ln in enumerate(lines)}
 

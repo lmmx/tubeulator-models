@@ -13,11 +13,7 @@ from .beam import beam_rollout_nexthop, bellman_rollout_nexthop
 from .config import TrainConfig
 from .dataset import PAD, NextHopGPUDataset
 from .defaults import MODEL_TYPES, repo_root, resolve_data
-from .evaluate import (
-    RouteMetrics,
-    compute_nexthop_rollout_metrics,
-    compute_nexthop_step_metrics,
-)
+from .evaluate import compute_nexthop_rollout_metrics, compute_nexthop_step_metrics
 from .graph_enriched import build_enriched_graph
 from .models.combined import RouteModel
 from .topology import (
@@ -86,50 +82,6 @@ def _n_legs(labels: torch.Tensor, model_type: str) -> torch.Tensor:
         return (labels != PAD).sum(dim=1)
     stride = 2 if model_type == "line" else 3
     return (labels[:, 0::stride] != PAD).sum(dim=1)
-
-
-def _aggregate_metrics(all_metrics: list[RouteMetrics]) -> RouteMetrics:
-    total_n = sum(m.n_examples for m in all_metrics)
-    if total_n == 0:
-        return all_metrics[0]
-
-    def _wavg(attr: str) -> float | None:
-        vals = [
-            (getattr(m, attr), m.n_examples)
-            for m in all_metrics
-            if getattr(m, attr) is not None
-        ]
-        if not vals:
-            return None
-        return sum(v * n for v, n in vals) / sum(n for _, n in vals)
-
-    # Merge stratified dicts across batches
-    from collections import defaultdict
-
-    merged_strat: dict[int, list[tuple[float, int]]] = defaultdict(list)
-    has_strat = False
-    for m in all_metrics:
-        if m.stratified is not None:
-            has_strat = True
-            for k, (acc, n) in m.stratified.items():
-                merged_strat[k].append((acc, n))
-    stratified = None
-    if has_strat:
-        stratified = {
-            k: (sum(a * n for a, n in v) / sum(n for _, n in v), sum(n for _, n in v))
-            for k, v in sorted(merged_strat.items())
-        }
-
-    return RouteMetrics(
-        exact_match=_wavg("exact_match"),
-        any_in_beam=_wavg("any_in_beam"),
-        line_acc=_wavg("line_acc"),
-        dir_acc=_wavg("dir_acc"),
-        station_acc=_wavg("station_acc"),
-        topologically_valid=_wavg("topologically_valid"),
-        n_examples=total_n,
-        stratified=stratified,
-    )
 
 
 def _try_compile(model: nn.Module) -> nn.Module:
@@ -533,9 +485,6 @@ def train(cfg: TrainConfig) -> None:
             shuffle = torch.randperm(n_train, device=device, generator=train_gen)
             shuffled_train = train_idx[shuffle]
 
-            if not is_nexthop:
-                ds.resample_labels()
-
             # ── train ─────────────────────────────────────────
             model.train()
             epoch_loss = torch.zeros(1, device=device)
@@ -604,7 +553,7 @@ def train(cfg: TrainConfig) -> None:
                         loss = policy_loss + VALUE_LOSS_WEIGHT * value_loss
                     n_items = currents.size(0)
                 else:
-                    raise ValueError(model_type)
+                    raise ValueError(f"Model type {cfg.model_type} is not nexthop")
 
                 optimizer.zero_grad(set_to_none=True)
                 scaler.scale(loss).backward()

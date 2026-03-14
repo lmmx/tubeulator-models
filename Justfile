@@ -26,20 +26,16 @@ plot:
 
 # ── Training ─────────────────────────────────────────────────
 
-train-hi profile="" *args="":
-    uv run --group pyg tm-hierarchical {{ if profile != "" { "--profile " + profile } else { "" } }} {{args}}
-
 # Train a single model (e.g. just train line)
 train model="change" profile="" *args="":
     uv run --group pyg tm-train --model {{model}} {{ if profile != "" { "--profile " + profile } else { "" } }} {{args}}
 
-# Train all three models sequentially
-train-all profile="":
+# Train all models sequentially
+train-all profile="full":
     #!/usr/bin/env bash
     set -euo pipefail
-    for m in line change station; do
-        echo "═══ Training model: $m ═══"
-        just train "$m" "{{profile}}"
+    just train nexthop "{{profile}}"
+    just train nexthop "{{profile}}" --value-primary --batch-size 1024 --epochs 200
     done
 
 # Train all with full profile
@@ -80,11 +76,6 @@ plan origin dest via="":
 
 # Build everything from scratch and train all models
 all: data train-all
-
-# Quick dev cycle: rebuild routes + train change model
-dev:
-    just routes
-    just train change dev
 
 # ── Housekeeping ─────────────────────────────────────────────
 

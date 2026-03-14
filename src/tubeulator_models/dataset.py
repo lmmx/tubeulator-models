@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 import json
-import random
 from pathlib import Path
 
 import torch
-from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import Dataset
 
 
-__all__ = ["RouteDataset", "", "collate_routes"]
+__all__ = ["NextHopGPUDataset"]
 
 PAD = -1
 

@@ -9,7 +9,7 @@ import io
 import json
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, NamedTuple
+from typing import NamedTuple
 
 import torch
 from rich.console import Console
@@ -29,9 +29,6 @@ from .topology import (
     load_interchange_data,
 )
 
-
-if TYPE_CHECKING:
-    import torch
 
 __all__ = ["load_model", "rollout", "predict_time"]
 
@@ -730,27 +727,6 @@ def run_value(args: argparse.Namespace) -> None:
     _render_time(orig_display, dest_display, minutes)
 
 
-def run_both(args: argparse.Namespace) -> None:
-    console.print("[dim]Loading models...[/dim]")
-    policy_lm = load_model("policy", source=args.policy_model, profile=args.profile)
-    value_lm = load_model("value", source=args.value_model, profile=args.profile)
-    console.print("[dim]Loaded.[/dim]\n")
-
-    if args.via:
-        path, success = rollout_via(lm, args.origin, args.destination, args.via)
-    else:
-        path, success = rollout(lm, args.origin, args.destination)
-
-    _render_route(path, success, policy_lm)
-
-    if success:
-        minutes = predict_time(value_lm, args.origin, args.destination)
-        orig_display = _display_name(path[0], policy_lm.stations, policy_lm.stop_names)
-        dest_display = _display_name(path[-1], policy_lm.stations, policy_lm.stop_names)
-        console.print()
-        _render_time(orig_display, dest_display, minutes)
-
-
 def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("-o", "--origin", required=True, help="Origin station name")
     parser.add_argument(
@@ -791,7 +767,6 @@ def main() -> None:
     _add_common_args(p_route)
     p_route.add_argument("--policy-model", default=None)
     p_route.add_argument("--value-model", default=None)
-    p_route.set_defaults(func=run_both)
 
     args = parser.parse_args()
     args.func(args)

@@ -18,7 +18,6 @@ tm-gtfs2graph   = "tubeulator_models.cli:gtfs2graph"
 tm-graph2pyg    = "tubeulator_models.cli:graph2pyg"
 tm-gtfs2pyg     = "tubeulator_models.cli:gtfs2pyg"
 tm-train        = "tubeulator_models.train:main"
-tm-hierarchical = "tubeulator_models.hierarchical:main"
 tm-export       = "tubeulator_models.export:main"
 tm-infer        = "tubeulator_models.infer:main"
 

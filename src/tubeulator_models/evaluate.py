@@ -6,91 +6,11 @@ from dataclasses import dataclass
 
 import torch
 
-from .dataset import PAD
-
 
 __all__ = [
-    "RouteMetrics",
     "compute_nexthop_step_metrics",
     "compute_nexthop_rollout_metrics",
 ]
-
-
-@dataclass
-class RouteMetrics:
-    exact_match: float
-    any_in_beam: float
-    line_acc: float | None
-    dir_acc: float | None
-    station_acc: float | None
-    topologically_valid: float
-    n_examples: int
-    stratified: dict[int, tuple[float, int]] | None = None
-
-    def __str__(self) -> str:
-        parts = [
-            f"exact={self.exact_match:.1%}",
-            f"beam={self.any_in_beam:.1%}",
-        ]
-        if self.line_acc is not None:
-            parts.append(f"line={self.line_acc:.1%}")
-        if self.dir_acc is not None:
-            parts.append(f"dir={self.dir_acc:.1%}")
-        if self.station_acc is not None:
-            parts.append(f"station={self.station_acc:.1%}")
-        parts.append(f"valid={self.topologically_valid:.1%}")
-        return " | ".join(parts)
-
-
-def _sequences_match(pred: torch.Tensor, label: torch.Tensor) -> bool:
-    """Check if predicted sequence matches a label, ignoring PAD."""
-    label_len = (label != PAD).sum().item()
-    if label_len == 0:
-        return True
-    if pred.size(0) < label_len:
-        return False
-    return torch.equal(pred[:label_len], label[:label_len])
-
-
-def _best_matching_label(
-    pred: torch.Tensor,
-    all_labels: list[torch.Tensor],
-) -> torch.Tensor:
-    """Return the valid label with the most matching tokens."""
-    best_label = all_labels[0]
-    best_overlap = -1
-    for label in all_labels:
-        label_len = (label != PAD).sum().item()
-        compare_len = min(pred.size(0), label_len)
-        if compare_len == 0:
-            continue
-        overlap = (pred[:compare_len] == label[:compare_len]).sum().item()
-        if overlap > best_overlap:
-            best_overlap = overlap
-            best_label = label
-    return best_label
-
-
-def _per_head_accuracy(
-    pred: torch.Tensor,
-    label: torch.Tensor,
-    stride: int,
-    offset: int,
-) -> tuple[int, int]:
-    correct = 0
-    total = 0
-    max_steps = pred.size(0) // stride if stride > 0 else pred.size(0)
-    for step in range(max_steps):
-        pred_col = step * stride + offset
-        label_col = step * stride + offset
-        if label_col >= label.size(0) or label[label_col] == PAD:
-            break
-        if pred_col >= pred.size(0):
-            break
-        total += 1
-        if pred[pred_col] == label[label_col]:
-            correct += 1
-    return correct, total
 
 
 @dataclass
