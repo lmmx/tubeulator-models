@@ -68,6 +68,7 @@ class Stop:
     Name: str
     Lat: float
     Lon: float
+    HubNaptanCode: str
 
 
 def _normalize_stop_name(name: str) -> str:
@@ -89,12 +90,12 @@ def _normalize_stop_name(name: str) -> str:
 
 
 def _make_stop(obj) -> Stop:
-    """Normalize a StopPoint or MatchedStop into a Stop."""
     sid = getattr(obj, "NaptanId", None) or getattr(obj, "Id", None) or ""
     name = getattr(obj, "CommonName", None) or getattr(obj, "Name", None) or ""
     lat = getattr(obj, "Lat", None) or 0.0
     lon = getattr(obj, "Lon", None) or 0.0
-    return Stop(Id=sid, Name=name, Lat=lat, Lon=lon)
+    hub = getattr(obj, "HubNaptanCode", None) or ""
+    return Stop(Id=sid, Name=name, Lat=lat, Lon=lon, HubNaptanCode=hub)
 
 
 def _minutes_to_gtfs_time(minutes: int) -> str:
@@ -124,9 +125,18 @@ def _load_from_parquet(
                 Name=spec["name"],
                 Lat=spec["lat"],
                 Lon=spec["lon"],
+                HubNaptanCode=spec.get("hub", ""),
             )
 
     df = pl.read_parquet(parquet_path)
+
+    # Identify hub parents (location_type=1 abstractions, not real platforms)
+    hub_parents: set[str] = set()
+    hub_children: dict[str, list[str]] = {}
+    for sid, st in stops.items():
+        if st.HubNaptanCode and st.HubNaptanCode != sid:
+            hub_parents.add(st.HubNaptanCode)
+            hub_children.setdefault(st.HubNaptanCode, []).append(sid)
 
     # Name → stop_id lookup, normalized
     name_to_sid: dict[str, str] = {}
@@ -140,7 +150,23 @@ def _load_from_parquet(
         alias = PARQUET_NAME_ALIASES.get(norm)
         if alias:
             norm = alias
-        return name_to_sid.get(norm)
+        sid = name_to_sid.get(norm)
+        if sid is None:
+            return None
+        # Never resolve to a hub parent — they are grouping abstractions,
+        # not platforms.  Pick the most appropriate child instead.
+        if sid in hub_parents:
+            children = hub_children.get(sid, [])
+            if not children:
+                return sid  # no children registered, use it as-is
+            # Prefer Rail child for overground/elizabeth parquet sources
+            rail = [
+                c for c in children if "Rail" in stops[c].Name or c.startswith("910G")
+            ]
+            if rail:
+                return rail[0]
+            return children[0]
+        return sid
 
     unmatched: set[str] = set()
     n_trips = 0
@@ -193,6 +219,15 @@ def _load_from_api(
     stops: dict,
 ) -> None:
     """Load timetable data from the TfL API."""
+    try:
+        stop_points = tube.fetch.line.stop_points_by_id(id=line_id)
+        for sp in stop_points:
+            s = _make_stop(sp)
+            if s.Id and s.Id not in stops:
+                stops[s.Id] = s
+    except Exception:
+        pass  # non-fatal, hub codes just won't be available for this line
+
     try:
         route_data = tube.fetch.line.route_by_ids(ids=line_id)
     except Exception as e:
@@ -287,6 +322,38 @@ def _parquet_sources() -> dict[str, Path]:
     }
 
 
+def _build_stops_rows(stops: dict[str, Stop]) -> list[list]:
+    """Build stops.txt rows with parent_station from hub codes."""
+    # Collect all hub codes that have multiple child stops
+    hub_children: dict[str, list[str]] = {}
+    for sid, st in stops.items():
+        if st.HubNaptanCode and st.HubNaptanCode != sid:
+            hub_children.setdefault(st.HubNaptanCode, []).append(sid)
+
+    rows = []
+
+    # Emit parent stations for hubs with 2+ children
+    emitted_hubs = set()
+    for hub_id, children in hub_children.items():
+        if len(children) < 2:
+            continue
+        if hub_id not in emitted_hubs:
+            # Use first child's coords as the hub location
+            first = stops[children[0]]
+            rows.append([hub_id, first.Name, first.Lat, first.Lon, 1, ""])
+            emitted_hubs.add(hub_id)
+
+    # Emit all stops as children (or standalone)
+    for sid, st in stops.items():
+        parent = ""
+        loc_type = 0
+        if st.HubNaptanCode in emitted_hubs and st.HubNaptanCode != sid:
+            parent = st.HubNaptanCode
+        rows.append([sid, st.Name, st.Lat, st.Lon, loc_type, parent])
+
+    return rows
+
+
 def build_gtfs(output_path: Path) -> None:
     today = date.today()
     cal_start = today.strftime("%Y%m%d")
@@ -379,8 +446,15 @@ def build_gtfs(output_path: Path) -> None:
                 trip_rows,
             ),
             "stops.txt": (
-                ["stop_id", "stop_name", "stop_lat", "stop_lon"],
-                [[s.Id, s.Name, s.Lat, s.Lon] for s in stops.values()],
+                [
+                    "stop_id",
+                    "stop_name",
+                    "stop_lat",
+                    "stop_lon",
+                    "location_type",
+                    "parent_station",
+                ],
+                _build_stops_rows(stops),
             ),
             "stop_times.txt": (
                 [

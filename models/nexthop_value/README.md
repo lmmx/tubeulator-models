@@ -23,7 +23,7 @@ model-index:
         metrics:
           - type: mae
             name: Mean Absolute Error (minutes)
-            value: 0.49
+            value: 0.66
 ---
 
 # Tube Distance Field
@@ -32,7 +32,7 @@ A GATv2 encoder + MLP value head trained to predict shortest travel time between
 any pair of London Underground stations.
 
 Given an origin and destination, the model outputs estimated travel time in
-minutes.  **MAE: 0.49 min** — 90% of predictions within 30 seconds of the
+minutes.  **MAE: 0.66 min** — 90% of predictions within 30 seconds of the
 Floyd–Warshall ground truth.
 
 ## Intended Use
@@ -48,15 +48,15 @@ weights from TfL's GTFS timetable feed.
 |---|---|
 | Encoder | 16-layer GATv2, d=512, 8 heads |
 | Value head | 4-layer MLP with LayerNorm |
-| Graph | 272 stations |
-| Parameters | 11,174,673 |
+| Graph | 490 stations |
+| Parameters | 11,352,043 |
 | Training signal | Huber loss (δ=2 min) vs. Floyd–Warshall all-pairs shortest times |
 
 ## Evaluation Results
 
 | Metric | Value |
 |---|---|
-| Mean Absolute Error | 0.49 min |
+| Mean Absolute Error | 0.66 min |
 
 ## Limitations
 

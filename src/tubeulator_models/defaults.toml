@@ -68,6 +68,7 @@ filename = "lo-windrush-line-timetable-december-2025.pdf"
 name = "Custom House"
 lat = 51.5095
 lon = 0.0255
+hub = "HUBCUS"
 
 [data.missing_stops."910GBKRVS"]
 name = "Barking Riverside"
