@@ -9,7 +9,7 @@ import pdfplumber
 import polars as pl
 from PIL import ImageDraw
 
-from .defaults import repo_root, resolve_data
+from ..defaults import repo_root, resolve_data
 
 
 __all__ = ["sync_all", "extract_pdf", "download_pdf"]

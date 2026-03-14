@@ -8,7 +8,7 @@ import city2graph as c2g
 import geopandas as gpd
 import osmnx as ox
 
-from .defaults import repo_root, resolve_analysis, resolve_data, resolve_filter
+from ..defaults import repo_root, resolve_analysis, resolve_data, resolve_filter
 
 
 __all__ = ["load_gtfs", "build_travel_graph", "filter_to_region", "load_london_graph"]

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
 
-from .topology import Topology
+from ..graph.topology import Topology
 
 
 __all__ = ["Route", "find_routes", "build_dataset"]
