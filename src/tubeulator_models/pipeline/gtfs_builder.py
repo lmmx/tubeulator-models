@@ -12,7 +12,7 @@ from pathlib import Path
 import polars as pl
 import tubeulator as tube
 
-from .defaults import repo_root, resolve_data
+from ..defaults import repo_root, resolve_data
 
 
 SCHEDULE_MAP = {

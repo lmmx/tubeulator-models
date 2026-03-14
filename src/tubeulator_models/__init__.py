@@ -7,11 +7,11 @@ from .defaults import (
     resolve_filter,
     resolve_plot,
 )
-from .gtfs import build_travel_graph, filter_to_region, load_gtfs, load_london_graph
-from .hierarchical import (
-    evaluate_hierarchical,
-    expand_legs_to_stations,
-    hierarchical_decode,
+from .pipeline.gtfs import (
+    build_travel_graph,
+    filter_to_region,
+    load_gtfs,
+    load_london_graph,
 )
 
 

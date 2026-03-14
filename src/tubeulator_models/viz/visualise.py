@@ -9,7 +9,7 @@ import contextily as ctx
 import geopandas as gpd
 import matplotlib.pyplot as plt
 
-from .defaults import resolve_plot
+from ..defaults import resolve_plot
 
 
 __all__ = ["plot_transit_graph"]

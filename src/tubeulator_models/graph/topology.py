@@ -248,28 +248,6 @@ def build_adj_mask(topo: Topology, stations: list[str]) -> torch.Tensor:
     return mask
 
 
-def build_line_station_mask(
-    topo: Topology, stations: list[str], lines: list[str]
-) -> torch.Tensor:
-    """(n_lines, n_stations) boolean: mask[l, s] = True iff station s is on line l."""
-    import torch
-
-    st2i = {s: i for i, s in enumerate(stations)}
-    ln2i = {ln: i for i, ln in enumerate(lines)}
-    N = len(stations)
-    L = len(lines)
-    mask = torch.zeros(L, N, dtype=torch.bool)
-    for station, serving_lines in topo.station_lines.items():
-        si = st2i.get(station)
-        if si is None:
-            continue
-        for line in serving_lines:
-            li = ln2i.get(line)
-            if li is not None:
-                mask[li, si] = True
-    return mask
-
-
 def build_edge_time_matrix(topo: Topology, stations: list[str]) -> torch.Tensor:
     """(N, N) matrix: minimum travel time in seconds between adjacent stations."""
     import torch
@@ -899,7 +877,7 @@ def floyd_warshall_line_aware(
     import torch
 
     N = len(stations)
-    L = len(lines)
+    # L = len(lines)
     st2i = {s: i for i, s in enumerate(stations)}
     ln2i = {ln: i for i, ln in enumerate(lines)}
 

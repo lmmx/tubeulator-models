@@ -33,14 +33,14 @@ def _pyg_path() -> Path:
 
 def sync_timetables() -> None:
     """Download and extract PDF timetables for lines without API support."""
-    from .timetable_pdf import sync_all
+    from .pipeline.timetable_pdf import sync_all
 
     sync_all()
 
 
 def build_gtfs() -> None:
     """Fetch timetables from TfL API and write a GTFS zip."""
-    from .gtfs_builder import build_gtfs as _build
+    from .pipeline.gtfs_builder import build_gtfs as _build
 
     cfg = resolve_data()
     out = repo_root() / cfg["gtfs_path"]
@@ -50,7 +50,7 @@ def build_gtfs() -> None:
 
 def gtfs2graph() -> None:
     """Load GTFS → build travel-summary graph → filter to London → save GeoParquet."""
-    from .gtfs import load_london_graph
+    from .pipeline.gtfs import load_london_graph
 
     print("Loading GTFS and building London travel graph…")
     nodes, edges = load_london_graph()
@@ -67,7 +67,7 @@ def graph2pyg() -> None:
     import geopandas as gpd
     import torch
 
-    from .convert import gdf_to_pyg
+    from .pipeline.convert import gdf_to_pyg
 
     nodes_path, edges_path = _graph_paths()
     if not nodes_path.exists() or not edges_path.exists():
@@ -99,8 +99,8 @@ def gtfs2pyg() -> None:
 def build_routes() -> None:
     """Enumerate routes for all OD pairs and save training data."""
     from .config import TrainConfig
-    from .routes import build_dataset
-    from .topology import extract
+    from .graph.topology import extract
+    from .training.routes import build_dataset
 
     cfg = TrainConfig.from_defaults()
     topo = extract(cfg.gtfs_path)
@@ -116,7 +116,7 @@ def build_routes() -> None:
 
 def plot_graph() -> None:
     """Visualise the saved transit graph."""
-    from .visualise import plot_transit_graph
+    from .viz.visualise import plot_transit_graph
 
     nodes_path, edges_path = _graph_paths()
     if not nodes_path.exists() or not edges_path.exists():

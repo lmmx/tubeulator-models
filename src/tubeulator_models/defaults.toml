@@ -1,6 +1,6 @@
 [base]
 profile = "dev"
-default_model = "change"
+default_model = "nexthop"
 eval_only = false
 value_primary = false
 transfer_discount = 1.5
@@ -97,18 +97,6 @@ nexthop_policy = "permutans/tube-nexthop-policy"
 nexthop_value = "permutans/tube-distance-field"
 
 # ── Model-specific overrides ─────────────────────────────────
-[model.line]
-max_seq = 4
-
-[model.change]
-max_seq = 4
-label_smoothing = 0.0
-
-[model.station]
-max_seq = 40
-label_smoothing = 0.0
-scheduled_sampling = 0.5
-
 [model.nexthop]
 max_seq = 60
 
@@ -118,9 +106,6 @@ epochs = 20
 batch_size = 256
 lr = 5e-4
 beam_eval_sample = 0.1
-
-[profiles.dev.model.station]
-batch_size = 128
 
 [profiles.dev.model.nexthop]
 batch_size = 2048
@@ -136,17 +121,6 @@ n_heads = 8
 n_enc_layers = 6
 dropout = 0.1
 weight_decay = 1e-4
-
-[profiles.full.model.change]
-epochs = 150
-
-[profiles.full.model.station]
-max_seq = 50
-batch_size = 192
-lr = 2.8e-4
-beam_width = 20
-epochs = 100
-beam_eval_interval = 25
 
 [profiles.full.model.nexthop]
 batch_size = 4096
