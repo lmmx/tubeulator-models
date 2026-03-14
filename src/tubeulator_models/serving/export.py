@@ -405,25 +405,38 @@ def export(
     (export_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
     # ── Save topology for standalone inference ────────────────
-    # edge_times: {line: [[from_sid, to_sid, seconds], ...]}
     edge_times_export: dict[str, list] = {}
     for line_id, edges in topo.edge_time.items():
         edge_times_export[line_id] = [
             [from_sid, to_sid, t] for (from_sid, to_sid), t in edges.items()
         ]
 
-    # line_edges: {line: [[from_sid, to_sid], ...]} — all edges a line serves
     line_edges_export: dict[str, list] = {}
-    for line_id, edges in topo.line_edges.items():
-        line_edges_export[line_id] = [[a, b] for a, b in edges]
+    for line_id, edges in topo.edge_time.items():
+        line_edges_export[line_id] = [[a, b] for (a, b) in edges.keys()]
+
+    # Build transfer lookup
+    from ..defaults import resolve_data
+    from ..graph.topology import build_transfer_lookup, load_interchange_data
+
+    data_cfg = resolve_data()
+    ic_rel = data_cfg.get("interchange_path", "")
+    ic_path = repo_root() / ic_rel if ic_rel else None
+    transfers_export: dict[str, list] = {}
+    if ic_path is not None and ic_path.is_file():
+        ic_data = load_interchange_data(ic_path)
+        tl = build_transfer_lookup(topo, stations, ic_data, discount=1.0)
+        for (station, from_line, to_line), secs in tl.items():
+            transfers_export.setdefault(station, []).append([from_line, to_line, secs])
 
     topo_export = {
         "edge_times": edge_times_export,
         "line_edges": line_edges_export,
         "hub_members": {k: list(v) for k, v in topo.hub_members.items()},
+        "transfers": transfers_export,
     }
     (export_dir / "topology.json").write_text(json.dumps(topo_export) + "\n")
-    print(f"  Saved topology.json")
+    print("  Saved topology.json")
 
     # ── Save graph tensors for standalone inference ───────────
     from ..graph.enriched import build_enriched_graph

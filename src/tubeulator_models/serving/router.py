@@ -144,7 +144,9 @@ class TubeRouter:
             for i, idx in enumerate(path):
                 name = _clean_name(_display_name(idx, lm.stations, lm.stop_names))
                 line = segments[i][0] if i < len(segments) else None
-                is_xfer = prev_line is not None and line != prev_line
+                is_xfer = (
+                    prev_line is not None and line is not None and line != prev_line
+                )
                 steps.append(
                     RouteStep(
                         station=name,

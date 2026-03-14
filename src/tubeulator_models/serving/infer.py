@@ -74,6 +74,12 @@ class _ExportedTopology:
             k: set(v) for k, v in topo_data["hub_members"].items()
         }
 
+        # transfer_lookup: {(station, from_line, to_line): seconds}
+        self.transfer_lookup: dict[tuple[str, str, str], float] = {}
+        for station, entries in topo_data.get("transfers", {}).items():
+            for from_line, to_line, secs in entries:
+                self.transfer_lookup[(station, from_line, to_line)] = secs
+
     def lines_on_edge(self, from_sid: str, to_sid: str) -> set[str]:
         return self._lines_on_edge.get((from_sid, to_sid), set())
 
@@ -299,7 +305,7 @@ def _load_from_export(source: str | Path) -> LoadedModel:
         adj=adj,
         H=H,
         topo=topo,
-        transfer_lookup=None,
+        transfer_lookup=topo.transfer_lookup if topo is not None else None,
     )
 
 
