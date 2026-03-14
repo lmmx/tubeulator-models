@@ -13,6 +13,7 @@ from .pipeline.gtfs import (
     load_gtfs,
     load_london_graph,
 )
+from .serving.router import Route, RouteStep, TubeRouter
 
 
 __all__ = [

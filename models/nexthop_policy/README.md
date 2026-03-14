@@ -113,16 +113,31 @@ Floyd–Warshall all-pairs shortest paths provide the Q-value supervision signal
   station closures or service disruptions without mask modification.
 
 ## Usage
-```python
-import json, torch
-from safetensors.torch import load_file
-from huggingface_hub import hf_hub_download
 
-repo = "permutans/tube-nexthop-policy"
-config = json.loads(open(hf_hub_download(repo, "config.json")).read())
-weights = load_file(hf_hub_download(repo, "model.safetensors"))
-metadata = json.loads(open(hf_hub_download(repo, "metadata.json")).read())
-# See the project repository for full inference code.
+```bash
+pip install tubeulator-models[inference]
+```
+
+```python
+from tubeulator_models import TubeRouter
+
+router = TubeRouter.from_pretrained("permutans/tube-nexthop-policy")
+route = router.route("West Ham", "Shoreditch")
+print(route)
+# West Ham
+#   → [district] Bromley-by-Bow (2.0m)
+#   ...
+# ✓ 8 hops · 2 lines · 1 transfer · 18.0 min
+
+# With waypoints
+route = router.route("Camden Town", "Canary Wharf", via=["King's Cross"])
+```
+
+For CLI usage:
+
+```bash
+pip install tubeulator-models[cli]
+tm-infer policy --model permutans/tube-nexthop-policy -o "West Ham" -d Shoreditch
 ```
 
 ## Links
