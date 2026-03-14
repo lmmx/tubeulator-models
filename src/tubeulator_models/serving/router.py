@@ -3,17 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .infer import (
     LoadedModel,
-    load_model,
-    resolve_station,
-    rollout,
-    rollout_via,
     _assign_lines,
     _compute_cumulative_times,
     _display_name,
+    load_model,
+    rollout,
+    rollout_via,
 )
 
 
@@ -105,9 +103,7 @@ class TubeRouter:
     @property
     def stations(self) -> list[str]:
         """All station display names."""
-        return [
-            self._lm.stop_names.get(sid, sid) for sid in self._lm.stations
-        ]
+        return [self._lm.stop_names.get(sid, sid) for sid in self._lm.stations]
 
     def route(
         self,
@@ -146,25 +142,23 @@ class TubeRouter:
             )
             prev_line = None
             for i, idx in enumerate(path):
-                name = _clean_name(
-                    _display_name(idx, lm.stations, lm.stop_names)
-                )
+                name = _clean_name(_display_name(idx, lm.stations, lm.stop_names))
                 line = segments[i][0] if i < len(segments) else None
                 is_xfer = prev_line is not None and line != prev_line
-                steps.append(RouteStep(
-                    station=name,
-                    line=line,
-                    cumulative_minutes=cum[i] / 60.0,
-                    transfer_minutes=xfer[i] / 60.0 if i < len(xfer) else 0.0,
-                    is_transfer=is_xfer,
-                ))
+                steps.append(
+                    RouteStep(
+                        station=name,
+                        line=line,
+                        cumulative_minutes=cum[i] / 60.0,
+                        transfer_minutes=xfer[i] / 60.0 if i < len(xfer) else 0.0,
+                        is_transfer=is_xfer,
+                    )
+                )
                 if i < len(segments):
                     prev_line = segments[i][0]
         else:
             for i, idx in enumerate(path):
-                name = _clean_name(
-                    _display_name(idx, lm.stations, lm.stop_names)
-                )
+                name = _clean_name(_display_name(idx, lm.stations, lm.stop_names))
                 steps.append(RouteStep(station=name))
 
         lines_used = []
