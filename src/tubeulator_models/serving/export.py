@@ -404,6 +404,27 @@ def export(
     }
     (export_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
 
+    # ── Save topology for standalone inference ────────────────
+    # edge_times: {line: [[from_sid, to_sid, seconds], ...]}
+    edge_times_export: dict[str, list] = {}
+    for line_id, edges in topo.edge_time.items():
+        edge_times_export[line_id] = [
+            [from_sid, to_sid, t] for (from_sid, to_sid), t in edges.items()
+        ]
+
+    # line_edges: {line: [[from_sid, to_sid], ...]} — all edges a line serves
+    line_edges_export: dict[str, list] = {}
+    for line_id, edges in topo.line_edges.items():
+        line_edges_export[line_id] = [[a, b] for a, b in edges]
+
+    topo_export = {
+        "edge_times": edge_times_export,
+        "line_edges": line_edges_export,
+        "hub_members": {k: list(v) for k, v in topo.hub_members.items()},
+    }
+    (export_dir / "topology.json").write_text(json.dumps(topo_export) + "\n")
+    print(f"  Saved topology.json")
+
     # ── Save graph tensors for standalone inference ───────────
     from ..graph.enriched import build_enriched_graph
     from .infer import _read_stop_coords

@@ -51,6 +51,36 @@ def _read_stop_coords(gtfs_path: Path) -> dict[str, tuple[float, float]]:
     return coords
 
 
+# ── Network topology export helper ─────────────────────────────
+
+
+class _ExportedTopology:
+    """Minimal Topology-compatible object reconstructed from exported JSON."""
+
+    def __init__(self, topo_data: dict) -> None:
+        # edge_time: {line: {(from, to): seconds}}
+        self.edge_time: dict[str, dict[tuple[str, str], float]] = {}
+        for line_id, triples in topo_data["edge_times"].items():
+            self.edge_time[line_id] = {(f, t): secs for f, t, secs in triples}
+
+        # _lines_on_edge: {(from, to): set of line_ids}
+        self._lines_on_edge: dict[tuple[str, str], set[str]] = {}
+        for line_id, pairs in topo_data["line_edges"].items():
+            for f, t in pairs:
+                self._lines_on_edge.setdefault((f, t), set()).add(line_id)
+
+        # hub_members: {hub_id: set of member station ids}
+        self.hub_members: dict[str, set[str]] = {
+            k: set(v) for k, v in topo_data["hub_members"].items()
+        }
+
+    def lines_on_edge(self, from_sid: str, to_sid: str) -> set[str]:
+        return self._lines_on_edge.get((from_sid, to_sid), set())
+
+    def travel_time(self, line_id: str, from_sid: str, to_sid: str) -> float:
+        return self.edge_time.get(line_id, {}).get((from_sid, to_sid), 120.0)
+
+
 # ── Model loading ─────────────────────────────────────────────
 
 
@@ -207,6 +237,17 @@ def _load_from_export(source: str | Path) -> LoadedModel:
         except Exception:
             saved_graph = None
 
+    if source_path.is_dir():
+        topo_path = source_path / "topology.json"
+        topo_data = json.loads(topo_path.read_text()) if topo_path.exists() else None
+    else:
+        try:
+            topo_data = json.loads(_download(repo, "topology.json").read_text())
+        except Exception:
+            topo_data = None
+
+    topo = _ExportedTopology(topo_data) if topo_data is not None else None
+
     stations = metadata["stations"]
     lines = metadata["lines"]
     stop_names = metadata.get("stop_names", {})
@@ -257,7 +298,7 @@ def _load_from_export(source: str | Path) -> LoadedModel:
         stop_names=stop_names,
         adj=adj,
         H=H,
-        topo=None,
+        topo=topo,
         transfer_lookup=None,
     )
 
