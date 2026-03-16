@@ -37,13 +37,15 @@ class Route:
             return "Empty route"
         parts = [f"{self.steps[0].station}"]
         for s in self.steps[1:]:
-            prefix = f"  ↳ [{s.line}]" if s.is_transfer else f"  → [{s.line}]"
-            parts.append(f"{prefix} {s.station} ({s.cumulative_minutes:.1f}m)")
+            line_tag = f"[{s.line}] " if s.line else ""
+            prefix = f"  ↳ {line_tag}" if s.is_transfer else f"  → {line_tag}"
+            parts.append(f"{prefix}{s.station} ({s.cumulative_minutes:.1f}m)")
         status = "✓" if self.success else "✗"
+        t = "transfer" if self.n_transfers == 1 else "transfers"
         parts.append(
             f"{status} {len(self.steps) - 1} hops · "
             f"{len(self.lines_used)} lines · "
-            f"{self.n_transfers} transfers · "
+            f"{self.n_transfers} {t} · "
             f"{self.total_minutes:.1f} min"
         )
         return "\n".join(parts)
