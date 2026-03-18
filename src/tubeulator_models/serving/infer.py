@@ -35,6 +35,27 @@ __all__ = ["load_model", "rollout", "predict_time"]
 console = Console()
 
 
+def _canonical_path(
+    path: list[int],
+    stations: list[str],
+    topo,
+) -> tuple[str, ...]:
+    """Collapse hub members to get a canonical station sequence for dedup."""
+    canonical = []
+    for idx in path:
+        sid = stations[idx]
+        # Find the hub this station belongs to
+        hub_name = sid
+        if topo is not None:
+            for hub, members in topo.hub_members.items():
+                if sid in members or sid == hub:
+                    hub_name = hub
+                    break
+        if not canonical or canonical[-1] != hub_name:
+            canonical.append(hub_name)
+    return tuple(canonical)
+
+
 # ── GTFS coordinate extraction ────────────────────────────────
 
 
@@ -100,6 +121,9 @@ class LoadedModel(NamedTuple):
     H: torch.Tensor  # precomputed encoder output
     topo: Topology | None  # for line attribution
     transfer_lookup: dict[tuple[str, str, str], float] | None
+    graph_x: torch.Tensor
+    edge_index: torch.Tensor
+    edge_attr: torch.Tensor
 
 
 def _download(repo: str, filename: str) -> Path:
@@ -217,6 +241,9 @@ def _load_from_checkpoint(variant: str, profile: str = "full") -> LoadedModel:
         H=H,
         topo=topo,
         transfer_lookup=transfer_lookup,
+        graph_x=graph.x,
+        edge_index=graph.edge_index,
+        edge_attr=graph.edge_attr,
     )
 
 
@@ -306,6 +333,9 @@ def _load_from_export(source: str | Path) -> LoadedModel:
         H=H,
         topo=topo,
         transfer_lookup=topo.transfer_lookup if topo is not None else None,
+        graph_x=graph_x,
+        edge_index=edge_index,
+        edge_attr=edge_attr,
     )
 
 
@@ -484,6 +514,77 @@ def rollout_via(
 
 
 @torch.no_grad()
+def rollout_diverse(
+    lm: LoadedModel,
+    origin: str,
+    destination: str,
+    n_routes: int = 3,
+    beam_width: int = 8,
+    max_time_ratio: float = 2.0,
+    max_hops: int = 60,
+) -> list[tuple[list[int], float]]:
+    """
+    Beam search → deduplicate → filter → return top-n distinct routes.
+    """
+    from ..training.beam import beam_rollout_nexthop
+    from .infer import resolve_station  # if needed, or just use it directly
+
+    orig_idx = resolve_station(origin, lm.stations, lm.stop_names)
+    dest_idx = resolve_station(destination, lm.stations, lm.stop_names)
+
+    # We need graph tensors — beam_rollout_nexthop runs its own encoder
+    # For now, reload from the export; we'll cache these on LoadedModel later
+    origins = torch.tensor([orig_idx])
+    dests = torch.tensor([dest_idx])
+
+    beams = beam_rollout_nexthop(
+        lm.model,
+        lm.graph_x,  # <- need to add these to LoadedModel
+        lm.edge_index,
+        lm.edge_attr,
+        origins,
+        dests,
+        beam_width=max(beam_width, n_routes * 3),  # oversample for dedup
+        max_steps=max_hops,
+    )[0]
+
+    # Deduplicate by canonical path
+    seen: set[tuple] = set()
+    unique: list[tuple[list[int], float]] = []
+    for path, score in beams:
+        if path[-1] != dest_idx:
+            continue  # drop failures
+        canon = _canonical_path(path, lm.stations, lm.topo)
+        if canon not in seen:
+            seen.add(canon)
+            unique.append((path, score))
+
+    # Filter: drop routes more than max_time_ratio × best
+    if unique:
+        best_score = unique[0][1]
+        # Scores are log-probs (negative), so threshold is also negative
+        # But travel time is a better filter — compute times
+        filtered = []
+        best_time = None
+        for path, score in unique:
+            if lm.topo and len(path) >= 2:
+                segments = _assign_lines(path, lm.stations, lm.topo)
+                cum, _, _ = _compute_cumulative_times(
+                    path, segments, lm.stations, lm.topo, lm.transfer_lookup
+                )
+                mins = cum[-1] / 60.0
+                if best_time is None:
+                    best_time = mins
+                if mins <= best_time * max_time_ratio:
+                    filtered.append((path, score))
+            else:
+                filtered.append((path, score))
+        unique = filtered
+
+    return unique[:n_routes]
+
+
+@torch.no_grad()
 def predict_time(
     lm: LoadedModel,
     origin: str,
@@ -558,7 +659,6 @@ def _assign_lines(
             current_line = chosen
             segments.append((current_line, available_list))
         else:
-            current_line = None
             segments.append((None, []))
 
     return segments
@@ -673,6 +773,11 @@ def _render_route(path: list[int], success: bool, lm: LoadedModel) -> None:
                 is_transfer = prev_line is not None and line_id != prev_line
                 style = _line_style(line_id)
 
+                # Skip hub-internal hops (no line on this segment)
+                # unless it's the final destination
+                if line is None and i < len(path) - 1:
+                    continue
+
                 line_display = Text()
                 if is_transfer:
                     line_display.append("↳ ", style="bold yellow")
@@ -684,7 +789,8 @@ def _render_route(path: list[int], success: bool, lm: LoadedModel) -> None:
                     line_display,
                     time_str,
                 )
-                prev_line = line_id
+                if line_id is not None:
+                    prev_line = line_id
             else:
                 table.add_row(
                     str(i), Text(name, style=station_style), Text(""), time_str

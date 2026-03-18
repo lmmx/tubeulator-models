@@ -69,6 +69,13 @@ class Route:
         }
 
 
+def _clean_name(name: str) -> str:
+    for suffix in (" Underground Station", " DLR Station", " Station"):
+        if name.endswith(suffix):
+            return name[: -len(suffix)]
+    return name
+
+
 class TubeRouter:
     """
     Learned next-hop router for the London Underground.
@@ -149,6 +156,12 @@ class TubeRouter:
                 is_xfer = (
                     prev_line is not None and line is not None and line != prev_line
                 )
+
+                # Skip hub-internal hops (no line on this segment)
+                # unless it's the final destination
+                if line is None and i < len(path) - 1:
+                    continue
+
                 steps.append(
                     RouteStep(
                         station=name,
@@ -158,7 +171,7 @@ class TubeRouter:
                         is_transfer=is_xfer,
                     )
                 )
-                if i < len(segments):
+                if i < len(segments) and segments[i][0] is not None:
                     prev_line = segments[i][0]
         else:
             for i, idx in enumerate(path):
@@ -184,9 +197,105 @@ class TubeRouter:
             n_transfers=n_transfers,
         )
 
+    def routes(
+        self,
+        origin: str,
+        destination: str,
+        *,
+        n: int = 3,
+        beam_width: int = 8,
+        max_time_ratio: float = 2.0,
+        max_hops: int = 60,
+    ) -> list[Route]:
+        """
+        Compute multiple diverse routes from origin to destination.
 
-def _clean_name(name: str) -> str:
-    for suffix in (" Underground Station", " DLR Station", " Station"):
-        if name.endswith(suffix):
-            return name[: -len(suffix)]
-    return name
+        Args:
+            origin: Station name (substring match supported).
+            destination: Station name.
+            n: Maximum number of distinct routes to return.
+            beam_width: Beam search width (higher = more candidates before dedup).
+            max_time_ratio: Drop routes slower than this × the fastest route.
+            max_hops: Safety limit per rollout.
+
+        Returns:
+            List of Route objects, best-first.
+        """
+        from .infer import (
+            _assign_lines,
+            _compute_cumulative_times,
+            rollout_diverse,
+        )
+
+        lm = self._lm
+        candidates = rollout_diverse(
+            lm,
+            origin,
+            destination,
+            n_routes=n,
+            beam_width=beam_width,
+            max_time_ratio=max_time_ratio,
+            max_hops=max_hops,
+        )
+
+        results = []
+        for path, score in candidates:
+            steps: list[RouteStep] = []
+            has_topo = lm.topo is not None and len(path) >= 2
+
+            if has_topo:
+                segments = _assign_lines(path, lm.stations, lm.topo)
+                cum, _est, xfer = _compute_cumulative_times(
+                    path, segments, lm.stations, lm.topo, lm.transfer_lookup
+                )
+                prev_line = None
+                for i, idx in enumerate(path):
+                    name = _clean_name(_display_name(idx, lm.stations, lm.stop_names))
+                    line = segments[i][0] if i < len(segments) else None
+                    is_xfer = (
+                        prev_line is not None and line is not None and line != prev_line
+                    )
+
+                    # Skip hub-internal hops (no line on this segment)
+                    # unless it's the final destination
+                    if line is None and i < len(path) - 1:
+                        continue
+
+                    steps.append(
+                        RouteStep(
+                            station=name,
+                            line=line,
+                            cumulative_minutes=cum[i] / 60.0,
+                            transfer_minutes=xfer[i] / 60.0 if i < len(xfer) else 0.0,
+                            is_transfer=is_xfer,
+                        )
+                    )
+                    if i < len(segments) and segments[i][0] is not None:
+                        prev_line = segments[i][0]
+            else:
+                for i, idx in enumerate(path):
+                    name = _clean_name(_display_name(idx, lm.stations, lm.stop_names))
+                    steps.append(RouteStep(station=name))
+
+            lines_used = []
+            seen: set[str] = set()
+            if has_topo:
+                for s in steps:
+                    if s.line and s.line not in seen:
+                        lines_used.append(s.line)
+                        seen.add(s.line)
+
+            n_transfers = sum(1 for s in steps if s.is_transfer)
+            total = steps[-1].cumulative_minutes if steps else 0.0
+
+            results.append(
+                Route(
+                    steps=steps,
+                    success=True,
+                    total_minutes=total,
+                    lines_used=lines_used,
+                    n_transfers=n_transfers,
+                )
+            )
+
+        return results
