@@ -5,12 +5,12 @@ from tubeulator_models import TubeRouter
 router = TubeRouter.from_pretrained("permutans/tube-nexthop-policy")
 
 TEST_PAIRS = [
-    ("King's Cross", "Bank Underground"),
-    ("West Ham Underground", "Tottenham Court Road"),
-    ("Moorgate", "Paddington"),
-    ("Camden Town", "Waterloo"),
-    ("Stratford Underground", "Baker Street"),
-    ("Brixton", "King's Cross"),
+    ("Angel", "Paddington"),
+    ("Bethnal Green Underground", "Victoria Underground"),
+    ("Clapham Common", "Liverpool Street"),
+    ("Notting Hill Gate", "London Bridge"),
+    ("Barons Court", "Old Street"),
+    ("Brixton", "Canary Wharf"),
 ]
 
 for origin, dest in TEST_PAIRS:

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Station Guesser</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="loadScreen" class="load-screen">
+  <div class="load-card">
+    <h1>Station Guesser</h1>
+    <p>Load your station data to begin. Stations you've already ruled on will be skipped.</p>
+    <div class="load-buttons">
+      <button class="btn primary" onclick="document.getElementById('stationsIn').click()">
+        Load stations.json
+      </button>
+      <input type="file" id="stationsIn" accept=".json" class="hidden">
+      <button class="btn" onclick="document.getElementById('rulingsIn').click()">
+        Load rulings.json (optional)
+      </button>
+      <input type="file" id="rulingsIn" accept=".json" class="hidden">
+    </div>
+    <div id="loadStatus" class="load-status"></div>
+    <button id="startBtn" class="btn primary hidden" onclick="Main.start()">
+      Start guessing
+    </button>
+  </div>
+</div>
+
+<div id="gameScreen" class="game-screen hidden">
+  <div class="top-bar">
+    <div class="station-info">
+      <div class="station-name" id="stationName"></div>
+      <div class="station-lines" id="stationLines"></div>
+    </div>
+    <div class="progress" id="progress"></div>
+    <div class="top-actions">
+      <select id="startPoint">
+        <option value="borough">Start near Borough</option>
+        <option value="random">Random order</option>
+      </select>
+      <button class="btn small" onclick="State.exportRulings()">Export rulings</button>
+    </div>
+  </div>
+
+  <div class="main-area">
+    <div class="sv-container">
+      <iframe id="svFrame" class="sv-frame" frameborder="0" allowfullscreen></iframe>
+      <div id="svFallback" class="sv-fallback hidden">
+        <p>Street View couldn't load. Try opening directly:</p>
+        <a id="svDirectLink" href="#" target="_blank" class="btn">Open in Google Maps</a>
+      </div>
+    </div>
+    <div class="minimap-container">
+      <div id="minimap"></div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <button class="btn ruled-out-btn" onclick="Navigator.rule('ruled-out')">
+      Not it
+      <span class="key-hint">N</span>
+    </button>
+    <button class="btn skip-btn" onclick="Navigator.skip()">
+      Skip
+      <span class="key-hint">S</span>
+    </button>
+    <button class="btn maybe-btn" onclick="Navigator.rule('maybe')">
+      Maybe
+      <span class="key-hint">M</span>
+    </button>
+  </div>
+</div>
+
+<div id="doneScreen" class="done-screen hidden">
+  <div class="load-card">
+    <h1>All done</h1>
+    <p id="doneSummary"></p>
+    <button class="btn primary" onclick="State.exportRulings()">Export rulings</button>
+    <button class="btn" onclick="location.reload()">Start over</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/state.js"></script>
+<script src="js/navigator.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

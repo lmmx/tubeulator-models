@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Station Explorer</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<h1>Station Explorer</h1>
+
+<div class="toolbar" id="toolbar">
+  <button class="primary" onclick="document.getElementById('fileIn').click()">Load stations.json</button>
+  <input type="file" id="fileIn" accept=".json" class="hidden">
+  <input type="text" id="search" placeholder="Search by name..." disabled>
+  <select id="statusFilter" disabled>
+    <option value="all">All stations</option>
+    <option value="unknown">Unknown only</option>
+    <option value="maybe">Maybe only</option>
+    <option value="ruled-out">Ruled out only</option>
+  </select>
+  <select id="radiusFilter" disabled>
+    <option value="0">No distance filter</option>
+    <option value="3">Within 3 km of Borough</option>
+    <option value="5">Within 5 km</option>
+    <option value="8">Within 8 km</option>
+    <option value="12">Within 12 km</option>
+    <option value="20">Within 20 km</option>
+  </select>
+  <button id="exportBtn" class="hidden" onclick="State.exportRulings()">Export rulings</button>
+  <button id="importBtn" class="hidden" onclick="document.getElementById('rulingsIn').click()">Import rulings</button>
+  <input type="file" id="rulingsIn" accept=".json" class="hidden">
+</div>
+
+<div class="line-pills" id="linePills"></div>
+
+<div class="map-wrap">
+  <div id="map"></div>
+  <div class="map-tools" id="mapTools">
+    <button id="labelsBtn" class="tool-btn active hidden" title="Toggle labels" onclick="MapView.toggleLabels()">Aa Labels</button>
+    <button id="selectBtn" class="tool-btn hidden" title="Multi-select" onclick="Select.toggle()">Select</button>
+    <span id="selectCount" class="hidden" style="font-size:12px;color:#2d6be4;font-weight:500;">0 selected</span>
+    <div id="selectActions" class="hidden" style="display:flex;gap:4px;">
+      <button class="tool-btn" onclick="Select.apply('ruled-out')" style="font-size:12px;color:#a33;">Rule out</button>
+      <button class="tool-btn" onclick="Select.apply('maybe')" style="font-size:12px;color:#0a7;">Maybe</button>
+      <button class="tool-btn" onclick="Select.apply('unknown')" style="font-size:12px;">Reset</button>
+      <button class="tool-btn" onclick="Select.clear();MapView.render()" style="font-size:12px;">Clear</button>
+    </div>
+    <span id="selectStatus" class="hidden" style="font-size:12px;color:#2d6be4;">Click stations to select</span>
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/state.js"></script>
+<script src="js/filters.js"></script>
+<script src="js/map.js"></script>
+<script src="js/select.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

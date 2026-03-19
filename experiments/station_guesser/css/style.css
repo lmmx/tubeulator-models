@@ -1,0 +1,96 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #1a1a1a; color: #eee; height: 100vh; overflow: hidden;
+}
+.hidden { display: none !important; }
+
+/* buttons */
+.btn {
+  font-size: 14px; padding: 8px 18px; border-radius: 8px;
+  border: 1px solid #444; background: #2a2a2a; color: #eee;
+  cursor: pointer; font-weight: 500; transition: background 0.15s;
+}
+.btn:hover { background: #3a3a3a; }
+.btn.primary { background: #2d6be4; border-color: #2d6be4; color: #fff; }
+.btn.primary:hover { background: #1b5ad4; }
+.btn.small { font-size: 12px; padding: 5px 12px; }
+.key-hint {
+  display: inline-block; font-size: 10px; padding: 1px 5px;
+  border: 1px solid rgba(255,255,255,0.25); border-radius: 3px;
+  margin-left: 6px; opacity: 0.5; font-weight: 400;
+}
+
+/* load screen */
+.load-screen {
+  display: flex; align-items: center; justify-content: center;
+  height: 100vh;
+}
+.load-card {
+  background: #222; border: 1px solid #333; border-radius: 12px;
+  padding: 40px; max-width: 480px; text-align: center;
+}
+.load-card h1 { font-size: 22px; font-weight: 500; margin-bottom: 10px; }
+.load-card p { font-size: 14px; color: #999; margin-bottom: 24px; line-height: 1.5; }
+.load-buttons { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.load-status { font-size: 13px; color: #7a7; margin-bottom: 16px; min-height: 20px; }
+
+/* game screen */
+.game-screen { display: flex; flex-direction: column; height: 100vh; }
+
+/* top bar */
+.top-bar {
+  display: flex; align-items: center; gap: 16px; padding: 10px 16px;
+  background: #222; border-bottom: 1px solid #333; flex-shrink: 0;
+}
+.station-info { flex: 1; min-width: 0; }
+.station-name { font-size: 18px; font-weight: 600; }
+.station-lines { font-size: 12px; color: #999; margin-top: 2px; }
+.progress { font-size: 13px; color: #888; white-space: nowrap; }
+.top-actions { display: flex; gap: 8px; align-items: center; }
+.top-actions select {
+  font-size: 12px; padding: 5px 8px; border-radius: 6px;
+  border: 1px solid #444; background: #2a2a2a; color: #eee;
+}
+
+/* main area */
+.main-area { flex: 1; display: flex; min-height: 0; position: relative; }
+.sv-container { flex: 1; position: relative; }
+.sv-frame { width: 100%; height: 100%; background: #111; }
+.sv-fallback {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
+  background: #111; color: #888; font-size: 14px;
+}
+
+/* minimap */
+.minimap-container {
+  width: 280px; flex-shrink: 0; border-left: 1px solid #333;
+}
+#minimap { width: 100%; height: 100%; }
+
+/* leaflet dark overrides */
+#minimap .leaflet-tile { filter: brightness(0.7) contrast(1.1) saturate(0.8); }
+#minimap .leaflet-control-attribution { display: none; }
+
+/* bottom bar */
+.bottom-bar {
+  display: flex; gap: 12px; padding: 14px 24px; justify-content: center;
+  background: #222; border-top: 1px solid #333; flex-shrink: 0;
+}
+.ruled-out-btn { min-width: 140px; background: #3a2020; border-color: #6a3333; color: #f99; }
+.ruled-out-btn:hover { background: #4a2828; }
+.maybe-btn { min-width: 140px; background: #1a3a2a; border-color: #2a6a4a; color: #8fd8b0; }
+.maybe-btn:hover { background: #224a34; }
+.skip-btn { min-width: 100px; }
+
+/* done screen */
+.done-screen {
+  display: flex; align-items: center; justify-content: center; height: 100vh;
+}
+
+/* mobile */
+@media (max-width: 768px) {
+  .minimap-container { display: none; }
+  .top-actions select { display: none; }
+}
