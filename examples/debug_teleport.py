@@ -1,22 +1,26 @@
 # experiments/debug_teleport.py
 """Debug routes that appear to teleport between distant stations."""
 
-import torch
 from tubeulator_models.serving.infer import (
-    LoadedModel,
     _assign_lines,
     _display_name,
     _load_from_export,
-    resolve_station,
     rollout_diverse,
 )
+
 
 REPO = "permutans/tube-nexthop-policy"
 lm = _load_from_export(REPO)
 
 
 def clean(name: str) -> str:
-    for suffix in (" Underground Station", " DLR Station", " Rail Station", " Station", " Rail"):
+    for suffix in (
+        " Underground Station",
+        " DLR Station",
+        " Rail Station",
+        " Station",
+        " Rail",
+    ):
         if name.endswith(suffix):
             return name[: -len(suffix)]
     return name
@@ -50,7 +54,11 @@ def debug_route(origin: str, dest: str, n: int = 5):
             if i > 0 and lm.topo is not None:
                 prev_sid = lm.stations[path[i - 1]]
                 lines_on = lm.topo.lines_on_edge(prev_sid, sid)
-                edge_lines = f"  edge_lines={sorted(lines_on)}" if lines_on else "  edge_lines=NONE"
+                edge_lines = (
+                    f"  edge_lines={sorted(lines_on)}"
+                    if lines_on
+                    else "  edge_lines=NONE"
+                )
 
             # Hub membership
             hub = ""
@@ -61,7 +69,9 @@ def debug_route(origin: str, dest: str, n: int = 5):
                         break
 
             line_tag = f"[{line}]" if line else "[---]"
-            print(f"    {i:2d}  {line_tag:20s} {name:40s} sid={sid}{hub}{edge_lines}{adj_flag}")
+            print(
+                f"    {i:2d}  {line_tag:20s} {name:40s} sid={sid}{hub}{edge_lines}{adj_flag}"
+            )
 
 
 # The two teleportation cases
