@@ -4,6 +4,7 @@
 from tubeulator_models.config import TrainConfig
 from tubeulator_models.graph.topology import extract
 
+
 cfg = TrainConfig.from_defaults(model_type="nexthop", profile="full")
 topo = extract(cfg.gtfs_path)
 
@@ -22,12 +23,14 @@ print(f"Found {len(ghosts)} ghost edges (in line_adj but not edge_time)\n")
 
 # Group by line
 from collections import Counter
+
+
 by_line = Counter(line for line, *_ in ghosts)
 for line, count in by_line.most_common():
     name = topo.route_names.get(line, line)
     print(f"  {name} ({line}): {count} ghost edges")
 
-print(f"\n--- Ghosts involving key stations ---")
+print("\n--- Ghosts involving key stations ---")
 keywords = {"shepherd", "clapham", "highbury", "junction"}
 for line, from_sid, to_sid, from_name, to_name in ghosts:
     if any(k in from_name.lower() or k in to_name.lower() for k in keywords):
