@@ -89,6 +89,30 @@ uv run --group prep    tm-gtfs2graph   # GTFS → GeoParquet
 uv run --group pyg     tm-graph2pyg    # GeoParquet → PyG .pt
 ```
 
+## Graph structure visualisation
+
+The Underground is modelled as a weighted spatial graph:
+
+- nodes = stations
+- edges = directed travel segments (GTFS-derived)
+- weights = normalised travel times + transfer structure
+
+Besides using it for shortest-path routing, we can also visualise this graph's
+structural properties relevant to routing through
+a spectral measure derived from the graph Laplacian pseudoinverse,
+specifically effective resistance curvature.
+
+This measure provides a *geometry of redundancy*, as a scalar value for each station,
+as described by [Devriendt and Lambiotte][dev22] (2022)
+_Discrete curvature on graphs from the effective resistance_:
+
+[dev22]: https://arxiv.org/abs/2201.06385
+
+- low values mean a station is structurally redundant, having multiple routing alternatives
+- high values indicate structurally constrained regions with limited path diversity (the "bottlenecks")
+
+<img src="https://raw.githubusercontent.com/lmmx/tubeulator-models/master/data/graph/network_annotated.png" />
+
 ## Configuration
 
 `defaults.toml` is the single source of truth for all tuneable values. The merge order is:
